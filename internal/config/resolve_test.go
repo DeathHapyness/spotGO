@@ -14,10 +14,10 @@ func TestResolve(t *testing.T) {
 		name       string
 		flags      Credentials
 		env        map[string]string
-		file       *Credentials // nil = sem arquivo
+		file       *Credentials
 		want       Credentials
 		wantSource Source
-		wantErr    string // substring; "" = sem erro
+		wantErr    string
 		wantNoCred bool
 	}{
 		{

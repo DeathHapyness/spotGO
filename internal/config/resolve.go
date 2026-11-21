@@ -6,13 +6,11 @@ import (
 	"strings"
 )
 
-// Variáveis de ambiente aceitas.
 const (
 	EnvClientID     = "SPOTGO_CLIENT_ID"
 	EnvClientSecret = "SPOTGO_CLIENT_SECRET"
 )
 
-// Source diz de onde as credenciais vieram.
 type Source string
 
 const (
@@ -21,8 +19,6 @@ const (
 	SourceFile  Source = "file"
 )
 
-// ErrNoCredentials indica que nenhuma fonte tem credenciais.
-// Quem chama decide se abre o assistente ou só mostra o erro.
 var ErrNoCredentials = errors.New(`nenhuma credencial do Spotify configurada.
 
   1. Crie um app grátis em https://developer.spotify.com/dashboard
@@ -30,13 +26,8 @@ var ErrNoCredentials = errors.New(`nenhuma credencial do Spotify configurada.
 
 ou use --client-id/--client-secret ou ` + EnvClientID + `/` + EnvClientSecret)
 
-// Resolve procura as credenciais nesta ordem: flags, ambiente e arquivo.
-// A primeira fonte que tiver os dois campos vence. Se uma fonte tiver só um
-// dos campos, isso é erro: misturar o ID de uma fonte com o secret de outra
-// geraria falhas difíceis de entender.
-//
-// getenv é injetado (normalmente os.Getenv) para os testes não dependerem
-// do ambiente real.
+// Resolve usa a primeira fonte completa (flags → env → arquivo). Uma fonte com
+// só um dos campos é erro: nunca mistura ID de uma fonte com secret de outra.
 func Resolve(flags Credentials, getenv func(string) string, path string) (Credentials, Source, error) {
 	candidates := []struct {
 		src            Source

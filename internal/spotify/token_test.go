@@ -75,7 +75,7 @@ func TestRequestTokenServerError(t *testing.T) {
 func TestRequestTokenNetwork(t *testing.T) {
 	srv := httptest.NewServer(http.NotFoundHandler())
 	url := srv.URL
-	srv.Close() // ninguém escutando mais nesse endereço
+	srv.Close()
 
 	_, err := RequestToken(context.Background(), http.DefaultClient, url, testCreds)
 	if err == nil || errors.Is(err, ErrInvalidCredentials) {
