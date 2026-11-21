@@ -27,5 +27,7 @@ Na primeira vez, o spotgo pede suas credenciais da API do Spotify
 	pf.StringVar(&opts.ClientID, "client-id", "", "Client ID da API do Spotify")
 	pf.StringVar(&opts.ClientSecret, "client-secret", "", "Client Secret da API do Spotify")
 
+	cmd.AddCommand(newAuthCmd(opts))
+
 	return cmd
 }
