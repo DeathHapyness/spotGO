@@ -1,0 +1,192 @@
+package deezer
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"reflect"
+	"slices"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/DeathHapyness/spotGO/internal/song"
+)
+
+func TestEnrichTrack(t *testing.T) {
+	c, _ := newTestClient(t, fixtureServer(t), "")
+	src := song.Song{
+		Title:     "Come Together - Remastered 2009",
+		Artists:   []string{"The Beatles"},
+		Duration:  259946 * time.Millisecond,
+		SpotifyID: "x",
+	}
+
+	got, ok, err := c.EnrichTrack(context.Background(), src)
+	if err != nil || !ok {
+		t.Fatalf("EnrichTrack: ok=%v err=%v", ok, err)
+	}
+	if got.ISRC != "GBAYE0601690" || got.TrackNumber != 1 || got.DiscNumber != 1 {
+		t.Fatalf("números = %+v", got)
+	}
+	if got.Album != "Abbey Road (Remastered 2009)" || got.AlbumArtist != "The Beatles" {
+		t.Fatalf("álbum = %q / %q", got.Album, got.AlbumArtist)
+	}
+	if !strings.HasSuffix(got.CoverURL, "1000x1000-000000-80-0-0.jpg") {
+		t.Fatalf("CoverURL = %q", got.CoverURL)
+	}
+	if got.ReleaseDate == "" {
+		t.Fatal("ReleaseDate vazio")
+	}
+	if got.Title != src.Title || got.SpotifyID != "x" || !slices.Equal(got.Artists, src.Artists) {
+		t.Fatalf("campos do Spotify alterados: %+v", got)
+	}
+}
+
+func TestEnrichTrackKeepsSpotifyFields(t *testing.T) {
+	c, _ := newTestClient(t, fixtureServer(t), "")
+	src := song.Song{
+		Title:       "Come Together - Remastered 2009",
+		Artists:     []string{"The Beatles"},
+		Album:       "Abbey Road (Remastered 2009)",
+		ReleaseDate: "1969-09-26",
+		Duration:    259946 * time.Millisecond,
+	}
+	got, ok, err := c.EnrichTrack(context.Background(), src)
+	if err != nil || !ok {
+		t.Fatalf("ok=%v err=%v", ok, err)
+	}
+	if got.ReleaseDate != "1969-09-26" || got.Album != src.Album {
+		t.Fatalf("sobrescreveu dados do Spotify: %q %q", got.ReleaseDate, got.Album)
+	}
+}
+
+func TestEnrichTrackNoMatch(t *testing.T) {
+	c, _ := newTestClient(t, fixtureServer(t), "")
+	src := song.Song{Title: "Come Together", Artists: []string{"Ninguém"}, Duration: 258 * time.Second, SpotifyID: "x"}
+
+	got, ok, err := c.EnrichTrack(context.Background(), src)
+	if ok || err != nil {
+		t.Fatalf("ok=%v err=%v, quero false/nil", ok, err)
+	}
+	if !reflect.DeepEqual(got, src) {
+		t.Fatalf("Song alterada: %+v", got)
+	}
+}
+
+func TestEnrichTrackNetworkError(t *testing.T) {
+	h := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusBadGateway) })
+	c, _ := newTestClient(t, h, "")
+	src := song.Song{Title: "Come Together", Artists: []string{"The Beatles"}}
+
+	got, ok, err := c.EnrichTrack(context.Background(), src)
+	if ok || err == nil {
+		t.Fatalf("ok=%v err=%v, quero false/erro", ok, err)
+	}
+	if !reflect.DeepEqual(got, src) {
+		t.Fatalf("Song alterada: %+v", got)
+	}
+}
+
+func albumSongs() []song.Song {
+	return []song.Song{
+		{Title: "Come Together - Remastered 2009", Artists: []string{"The Beatles"}, Album: "Abbey Road (Remastered 2009)", Duration: 259946 * time.Millisecond, SpotifyID: "a"},
+		{Title: "Something - Remastered 2009", Artists: []string{"The Beatles"}, Album: "Abbey Road (Remastered 2009)", Duration: 182293 * time.Millisecond, SpotifyID: "b"},
+		{Title: "Maxwell's Silver Hammer - Remastered 2009", Artists: []string{"The Beatles"}, Album: "Abbey Road (Remastered 2009)", Duration: 207106 * time.Millisecond, SpotifyID: "c"},
+	}
+}
+
+func TestEnrichAlbum(t *testing.T) {
+	c, _ := newTestClient(t, fixtureServer(t), "")
+	songs := albumSongs()
+	orig := albumSongs()
+
+	got, err := c.EnrichAlbum(context.Background(), "Abbey Road (Remastered 2009)", "The Beatles", songs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, s := range got {
+		if s.TrackNumber != i+1 || s.DiscNumber != 1 || s.TrackCount != 17 || s.ISRC == "" || s.CoverURL == "" {
+			t.Errorf("[%d] = %+v", i, s)
+		}
+		if s.Title != orig[i].Title || s.SpotifyID != orig[i].SpotifyID {
+			t.Errorf("[%d] campos do Spotify alterados: %+v", i, s)
+		}
+	}
+	if !reflect.DeepEqual(songs, orig) {
+		t.Fatal("a slice original foi modificada")
+	}
+}
+
+func TestEnrichAlbumOutOfOrder(t *testing.T) {
+	c, _ := newTestClient(t, fixtureServer(t), "")
+	songs := albumSongs()
+	songs[0], songs[2] = songs[2], songs[0]
+
+	got, err := c.EnrichAlbum(context.Background(), "Abbey Road (Remastered 2009)", "The Beatles", songs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got[0].TrackNumber != 3 || got[1].TrackNumber != 2 || got[2].TrackNumber != 1 {
+		t.Fatalf("faixas = %d %d %d, quero 3 2 1", got[0].TrackNumber, got[1].TrackNumber, got[2].TrackNumber)
+	}
+}
+
+func TestEnrichAlbumNotFound(t *testing.T) {
+	c, _ := newTestClient(t, fixtureServer(t), "")
+	songs := albumSongs()
+
+	got, err := c.EnrichAlbum(context.Background(), "Disco Que Não Existe", "The Beatles", songs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got, albumSongs()) {
+		t.Fatalf("songs alteradas: %+v", got)
+	}
+}
+
+func TestDiscography(t *testing.T) {
+	c, _ := newTestClient(t, fixtureServer(t), "")
+
+	got, err := c.Discography(context.Background(), "The Beatles", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 4 {
+		t.Fatalf("len = %d, quero 4 álbuns: %+v", len(got), got)
+	}
+	for _, a := range got {
+		if a.RecordType != "album" || a.ID == 0 || a.Title == "" {
+			t.Errorf("entrada = %+v", a)
+		}
+	}
+
+	all, err := c.Discography(context.Background(), "The Beatles", []string{"album", "single"})
+	if err != nil || len(all) != 6 {
+		t.Fatalf("com singles: len = %d, err = %v", len(all), err)
+	}
+
+	if _, err := c.Discography(context.Background(), "Ninguém", nil); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("err = %v, quero ErrNotFound", err)
+	}
+}
+
+func TestAlbumSongs(t *testing.T) {
+	c, _ := newTestClient(t, fixtureServer(t), "")
+
+	got, err := c.AlbumSongs(context.Background(), 12047952)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("len = %d, quero 3", len(got))
+	}
+	for i, s := range got {
+		if s.Album != "Abbey Road (Remastered 2009)" || s.TrackNumber != i+1 || s.ISRC == "" || s.SpotifyID != "" {
+			t.Errorf("[%d] = %+v", i, s)
+		}
+		if s.Duration == 0 || len(s.Artists) != 1 || s.CoverURL == "" || s.TrackCount != 17 {
+			t.Errorf("[%d] incompleta: %+v", i, s)
+		}
+	}
+}
