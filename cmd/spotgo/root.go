@@ -14,10 +14,11 @@ func newRootCmd() *cobra.Command {
 		Use:   "spotgo",
 		Short: "Baixa músicas do Spotify buscando o áudio no YouTube Music",
 		Long: `spotgo baixa faixas, álbuns, playlists e artistas a partir de links do
-Spotify. Os metadados vêm da API do Spotify e o áudio vem do YouTube Music.
+Spotify, com capa e metadados. O áudio vem do YouTube Music; nada é baixado do Spotify.
 
-Na primeira vez, o spotgo pede suas credenciais da API do Spotify
-(crie um app grátis em https://developer.spotify.com/dashboard).`,
+Funciona sem conta e sem credenciais: a lista de faixas vem da página pública
+de embed do Spotify e os metadados vêm da API pública do Deezer.
+Quem tem Spotify Premium pode usar credenciais próprias (spotgo auth) como modo avançado.`,
 		Version:       version,
 		SilenceErrors: true,
 		SilenceUsage:  true,
@@ -28,6 +29,7 @@ Na primeira vez, o spotgo pede suas credenciais da API do Spotify
 	pf.StringVar(&opts.ClientSecret, "client-secret", "", "Client Secret da API do Spotify")
 
 	cmd.AddCommand(newAuthCmd(opts))
+	cmd.AddCommand(newSaveCmd(func(p func(int, int)) resolver { return newPublicResolver(p) }))
 
 	return cmd
 }

@@ -14,8 +14,30 @@ import (
 	"golang.org/x/term"
 
 	"github.com/DeathHapyness/spotGO/internal/config"
+	"github.com/DeathHapyness/spotGO/internal/deezer"
+	"github.com/DeathHapyness/spotGO/internal/embed"
+	"github.com/DeathHapyness/spotGO/internal/fetch"
+	"github.com/DeathHapyness/spotGO/internal/song"
+	"github.com/DeathHapyness/spotGO/internal/source"
 	"github.com/DeathHapyness/spotGO/internal/spotify"
 )
+
+// O embed do Spotify responde diferente para clientes que não parecem um navegador.
+const browserUserAgent = "Mozilla/5.0 (X11; Linux x86_64) Chrome/131.0 Safari/537.36"
+
+type resolver interface {
+	Resolve(ctx context.Context, ref song.Ref) (source.Result, error)
+}
+
+// newPublicResolver monta o modo público com um único fetch.Client, para o
+// cache e os limites por host valerem para o embed e o Deezer juntos.
+func newPublicResolver(progress func(done, total int)) *source.Public {
+	cacheDir, _ := fetch.DefaultCacheDir()
+	f := fetch.New(fetch.Options{UserAgent: browserUserAgent, CacheDir: cacheDir})
+	p := source.NewPublic(embed.New(f), deezer.New(f))
+	p.Progress = progress
+	return p
+}
 
 const envConfigPath = "SPOTGO_CONFIG"
 
