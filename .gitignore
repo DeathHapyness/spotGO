@@ -11,5 +11,5 @@ coverage.*
 .idea/
 .vscode/
 
-# Workspace do Claude (planos em execução)
 /.superpowers/
+/docs/superpowers
