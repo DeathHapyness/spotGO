@@ -1,0 +1,185 @@
+{
+  "data": [
+    {
+      "id": 116348452,
+      "title": "Come Together (Remastered 2009)",
+      "title_short": "Come Together",
+      "title_version": "(Remastered 2009)",
+      "isrc": "GBAYE0601690",
+      "duration": 258,
+      "explicit_lyrics": false,
+      "artist": {
+        "id": 1,
+        "name": "The Beatles"
+      },
+      "album": {
+        "id": 12047952,
+        "title": "Abbey Road (Remastered 2009)",
+        "cover_xl": "https://cdn-images.dzcdn.net/images/cover/aa94ab293730bb7845d2aa8c672b2c29/1000x1000-000000-80-0-0.jpg"
+      }
+    },
+    {
+      "id": 116348640,
+      "title": "Come Together (Remastered 2015)",
+      "title_short": "Come Together",
+      "title_version": "(Remastered 2015)",
+      "isrc": "GBUM71505891",
+      "duration": 258,
+      "explicit_lyrics": false,
+      "artist": {
+        "id": 1,
+        "name": "The Beatles"
+      },
+      "album": {
+        "id": 12047956,
+        "title": "1 (Remastered 2015)",
+        "cover_xl": "https://cdn-images.dzcdn.net/images/cover/c65b3bd84e81056e060be144381c06c8/1000x1000-000000-80-0-0.jpg"
+      }
+    },
+    {
+      "id": 126848603,
+      "title": "Come Together / Dear Prudence / Cry Baby Cry",
+      "title_short": "Come Together / Dear Prudence / Cry Baby Cry",
+      "title_version": "",
+      "isrc": "GBAYE0601561",
+      "duration": 285,
+      "explicit_lyrics": false,
+      "artist": {
+        "id": 1,
+        "name": "The Beatles"
+      },
+      "album": {
+        "id": 13367057,
+        "title": "Love",
+        "cover_xl": "https://cdn-images.dzcdn.net/images/cover/35621b78e11aeeca37f6fa275100482f/1000x1000-000000-80-0-0.jpg"
+      }
+    },
+    {
+      "id": 760429682,
+      "title": "Come Together (Take 5)",
+      "title_short": "Come Together",
+      "title_version": "(Take 5)",
+      "isrc": "GBUM71903358",
+      "duration": 208,
+      "explicit_lyrics": false,
+      "artist": {
+        "id": 1,
+        "name": "The Beatles"
+      },
+      "album": {
+        "id": 112126942,
+        "title": "Abbey Road (Super Deluxe Edition)",
+        "cover_xl": "https://cdn-images.dzcdn.net/images/cover/cb1291c76d83e54e03ea17e53df99cf2/1000x1000-000000-80-0-0.jpg"
+      }
+    },
+    {
+      "id": 122172064,
+      "title": "Come Together (Take 1)",
+      "title_short": "Come Together",
+      "title_version": "(Take 1)",
+      "isrc": "GBAYE1100549",
+      "duration": 216,
+      "explicit_lyrics": false,
+      "artist": {
+        "id": 1,
+        "name": "The Beatles"
+      },
+      "album": {
+        "id": 12779758,
+        "title": "Anthology 3",
+        "cover_xl": "https://cdn-images.dzcdn.net/images/cover/be01f37a129aa4c004d4bb755d6caa92/1000x1000-000000-80-0-0.jpg"
+      }
+    },
+    {
+      "id": 19148861,
+      "title": "Come Together",
+      "title_short": "Come Together",
+      "title_version": "",
+      "isrc": "DEHQ91117601",
+      "duration": 257,
+      "explicit_lyrics": false,
+      "artist": {
+        "id": 1772041,
+        "name": "Re Beatles"
+      },
+      "album": {
+        "id": 1829291,
+        "title": "Come Together / Something (A Tribute to the Beatles)",
+        "cover_xl": "https://cdn-images.dzcdn.net/images/cover/c737f0b62ce3e25cedb59b735cc89b3b/1000x1000-000000-80-0-0.jpg"
+      }
+    },
+    {
+      "id": 872674372,
+      "title": "Come Together",
+      "title_short": "Come Together",
+      "title_version": "",
+      "isrc": "BXSJ71700018",
+      "duration": 251,
+      "explicit_lyrics": false,
+      "artist": {
+        "id": 11386468,
+        "name": "Blues Beatles"
+      },
+      "album": {
+        "id": 130933682,
+        "title": "Let It Blues",
+        "cover_xl": "https://cdn-images.dzcdn.net/images/cover/af2ad4fea27574b6761c66c255806e83/1000x1000-000000-80-0-0.jpg"
+      }
+    },
+    {
+      "id": 12519840,
+      "title": "Come Together (Originally Performed By the Beatles)",
+      "title_short": "Come Together",
+      "title_version": "(Originally Performed By the Beatles)",
+      "isrc": "USKWU1000362",
+      "duration": 181,
+      "explicit_lyrics": false,
+      "artist": {
+        "id": 1361171,
+        "name": "The Ultimate Beatles Cover Band"
+      },
+      "album": {
+        "id": 1148832,
+        "title": "Beatles Gold",
+        "cover_xl": "https://cdn-images.dzcdn.net/images/cover/45b38fcb5f30b26e2fce3b4a0d7dc027/1000x1000-000000-80-0-0.jpg"
+      }
+    },
+    {
+      "id": 902621482,
+      "title": "Come Together (The Beatles Cover)",
+      "title_short": "Come Together (The Beatles Cover)",
+      "title_version": "",
+      "isrc": "JPP300900465",
+      "duration": 326,
+      "explicit_lyrics": false,
+      "artist": {
+        "id": 73204762,
+        "name": "SiM"
+      },
+      "album": {
+        "id": 136186892,
+        "title": "Silence iz Mine",
+        "cover_xl": "https://cdn-images.dzcdn.net/images/cover/e541c98a8f34d51428cd1a37488049e7/1000x1000-000000-80-0-0.jpg"
+      }
+    },
+    {
+      "id": 1849334137,
+      "title": "Come Together (live)",
+      "title_short": "Come Together",
+      "title_version": "(live)",
+      "isrc": "DELM41903889",
+      "duration": 278,
+      "explicit_lyrics": false,
+      "artist": {
+        "id": 94217,
+        "name": "The Beatles Revival Band"
+      },
+      "album": {
+        "id": 342241607,
+        "title": "40th Anniversary (Live at the FABRIK in Hamburg)",
+        "cover_xl": "https://cdn-images.dzcdn.net/images/cover/63e3fee1be41721326953b5e0c3f97ab/1000x1000-000000-80-0-0.jpg"
+      }
+    }
+  ],
+  "total": 185
+}

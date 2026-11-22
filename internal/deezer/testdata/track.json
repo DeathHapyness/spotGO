@@ -1,0 +1,22 @@
+{
+  "id": 116348452,
+  "title": "Come Together (Remastered 2009)",
+  "title_short": "Come Together",
+  "title_version": "(Remastered 2009)",
+  "isrc": "GBAYE0601690",
+  "duration": 258,
+  "track_position": 1,
+  "disk_number": 1,
+  "release_date": "2015-12-24",
+  "explicit_lyrics": false,
+  "artist": {
+    "id": 1,
+    "name": "The Beatles"
+  },
+  "album": {
+    "id": 12047952,
+    "title": "Abbey Road (Remastered 2009)",
+    "release_date": "2015-12-24",
+    "cover_xl": "https://cdn-images.dzcdn.net/images/cover/aa94ab293730bb7845d2aa8c672b2c29/1000x1000-000000-80-0-0.jpg"
+  }
+}

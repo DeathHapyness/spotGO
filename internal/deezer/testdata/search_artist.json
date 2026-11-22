@@ -1,0 +1,30 @@
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "The Beatles",
+      "nb_fan": 8181829
+    },
+    {
+      "id": 94217,
+      "name": "The Beatles Revival Band",
+      "nb_fan": 2223
+    },
+    {
+      "id": 100917612,
+      "name": "The Beatles Complete On Ukulele",
+      "nb_fan": 196
+    },
+    {
+      "id": 5086353,
+      "name": "The Beatles Covered",
+      "nb_fan": 133
+    },
+    {
+      "id": 5978126,
+      "name": "Beat Les",
+      "nb_fan": 84
+    }
+  ],
+  "total": 100
+}

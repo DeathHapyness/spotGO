@@ -1,0 +1,47 @@
+{
+  "data": [
+    {
+      "id": 858830922,
+      "title": "Anthology 4",
+      "release_date": "2025-11-21",
+      "record_type": "album",
+      "cover_xl": "https://cdn-images.dzcdn.net/images/cover/ad1658e4784cac89161d5151be746dca/1000x1000-000000-80-0-0.jpg"
+    },
+    {
+      "id": 860363782,
+      "title": "Anthology Collection",
+      "release_date": "2025-11-21",
+      "record_type": "album",
+      "cover_xl": "https://cdn-images.dzcdn.net/images/cover/cda71e62442527b52d19ba0f2272cc76/1000x1000-000000-80-0-0.jpg"
+    },
+    {
+      "id": 806861311,
+      "title": "Free As A Bird (2025 Mix)",
+      "release_date": "2025-08-21",
+      "record_type": "album",
+      "cover_xl": "https://cdn-images.dzcdn.net/images/cover/ad1658e4784cac89161d5151be746dca/1000x1000-000000-80-0-0.jpg"
+    },
+    {
+      "id": 290309452,
+      "title": "Get Back (Rooftop Performance)",
+      "release_date": "2022-01-28",
+      "record_type": "album",
+      "cover_xl": "https://cdn-images.dzcdn.net/images/cover/df4709ee7d571b75f46923992d6b77e5/1000x1000-000000-80-0-0.jpg"
+    },
+    {
+      "id": 1078321992,
+      "title": "Norwegian Wood (This Bird Has Flown) (Second Version - Take 2)",
+      "release_date": "2026-09-14",
+      "record_type": "single",
+      "cover_xl": "https://cdn-images.dzcdn.net/images/cover/e6b1f1fe4b354609ba357015a52c9921/1000x1000-000000-80-0-0.jpg"
+    },
+    {
+      "id": 1060934422,
+      "title": "Day Tripper (Songwriting Work Tape)",
+      "release_date": "2026-08-26",
+      "record_type": "single",
+      "cover_xl": "https://cdn-images.dzcdn.net/images/cover/e6b1f1fe4b354609ba357015a52c9921/1000x1000-000000-80-0-0.jpg"
+    }
+  ],
+  "total": 6
+}

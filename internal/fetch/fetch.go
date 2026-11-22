@@ -29,6 +29,8 @@ type Options struct {
 	UserAgent  string
 	CacheDir   string
 	Limits     map[string]time.Duration
+	// Sleep substitui a espera real (testes de outros pacotes). nil = espera real.
+	Sleep func(ctx context.Context, d time.Duration) error
 }
 
 type Client struct {
@@ -63,6 +65,9 @@ func New(o Options) *Client {
 		limits:     newLimiters(o.Limits),
 		sleep:      sleepCtx,
 		now:        time.Now,
+	}
+	if o.Sleep != nil {
+		c.sleep = o.Sleep
 	}
 	if c.http == nil {
 		c.http = &http.Client{Timeout: 30 * time.Second}

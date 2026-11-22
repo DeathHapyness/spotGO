@@ -1,0 +1,53 @@
+{
+  "data": [
+    {
+      "id": 116348452,
+      "title": "Come Together (Remastered 2009)",
+      "title_short": "Come Together",
+      "title_version": "(Remastered 2009)",
+      "isrc": "GBAYE0601690",
+      "duration": 258,
+      "track_position": 1,
+      "disk_number": 1,
+      "explicit_lyrics": false,
+      "artist": {
+        "id": 1,
+        "name": "The Beatles"
+      },
+      "album": {}
+    },
+    {
+      "id": 116348454,
+      "title": "Something (Remastered 2009)",
+      "title_short": "Something",
+      "title_version": "(Remastered 2009)",
+      "isrc": "GBAYE0601691",
+      "duration": 181,
+      "track_position": 2,
+      "disk_number": 1,
+      "explicit_lyrics": false,
+      "artist": {
+        "id": 1,
+        "name": "The Beatles"
+      },
+      "album": {}
+    },
+    {
+      "id": 116348456,
+      "title": "Maxwell's Silver Hammer (Remastered 2009)",
+      "title_short": "Maxwell's Silver Hammer",
+      "title_version": "(Remastered 2009)",
+      "isrc": "GBAYE0601692",
+      "duration": 206,
+      "track_position": 3,
+      "disk_number": 1,
+      "explicit_lyrics": false,
+      "artist": {
+        "id": 1,
+        "name": "The Beatles"
+      },
+      "album": {}
+    }
+  ],
+  "total": 3
+}

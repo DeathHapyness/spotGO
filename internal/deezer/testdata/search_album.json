@@ -1,0 +1,115 @@
+{
+  "data": [
+    {
+      "id": 12047952,
+      "title": "Abbey Road (Remastered 2009)",
+      "record_type": "album",
+      "cover_xl": "https://cdn-images.dzcdn.net/images/cover/aa94ab293730bb7845d2aa8c672b2c29/1000x1000-000000-80-0-0.jpg",
+      "nb_tracks": 17,
+      "artist": {
+        "id": 1,
+        "name": "The Beatles"
+      }
+    },
+    {
+      "id": 112126942,
+      "title": "Abbey Road (Super Deluxe Edition)",
+      "record_type": "album",
+      "cover_xl": "https://cdn-images.dzcdn.net/images/cover/cb1291c76d83e54e03ea17e53df99cf2/1000x1000-000000-80-0-0.jpg",
+      "nb_tracks": 40,
+      "artist": {
+        "id": 1,
+        "name": "The Beatles"
+      }
+    },
+    {
+      "id": 1111100002,
+      "title": "Abbey Road (2019 Mix)",
+      "record_type": "album",
+      "cover_xl": "https://cdn-images.dzcdn.net/images/cover/176deb0ea14f5ec0679b8652e8194964/1000x1000-000000-80-0-0.jpg",
+      "nb_tracks": 17,
+      "artist": {
+        "id": 1,
+        "name": "The Beatles"
+      }
+    },
+    {
+      "id": 5944142,
+      "title": "Oldies Radio Hit Songs! Featuring the Music of the Beatles, Burt Bacharach, And More",
+      "record_type": "album",
+      "cover_xl": "https://cdn-images.dzcdn.net/images/cover/c8578aa1df2dfa7db0cd5abb654346cc/1000x1000-000000-80-0-0.jpg",
+      "nb_tracks": 30,
+      "artist": {
+        "id": 4018616,
+        "name": "Magical Abbey Road Band"
+      }
+    },
+    {
+      "id": 652119661,
+      "title": "Lucinda Williams Sings The Beatles From Abbey Road",
+      "record_type": "album",
+      "cover_xl": "https://cdn-images.dzcdn.net/images/cover/049957de94a6ac9addbcad2070abc780/1000x1000-000000-80-0-0.jpg",
+      "nb_tracks": 12,
+      "artist": {
+        "id": 6981,
+        "name": "Lucinda Williams"
+      }
+    },
+    {
+      "id": 752311,
+      "title": "Abbey Road Christmas (In The Style Of The Beatles)",
+      "record_type": "album",
+      "cover_xl": "https://cdn-images.dzcdn.net/images/cover/23f5814d4c255c42faa85760baf5a126/1000x1000-000000-80-0-0.jpg",
+      "nb_tracks": 25,
+      "artist": {
+        "id": 1057256,
+        "name": "British Invasion All-Stars"
+      }
+    },
+    {
+      "id": 1475093,
+      "title": "A Christmas Tribute to the Beatles",
+      "record_type": "album",
+      "cover_xl": "https://cdn-images.dzcdn.net/images/cover/82cb29162eaba6c0a6329f6de9ac8b71/1000x1000-000000-80-0-0.jpg",
+      "nb_tracks": 30,
+      "artist": {
+        "id": 1582485,
+        "name": "Abbey Road Xmas Ensemble"
+      }
+    },
+    {
+      "id": 164909482,
+      "title": "Abbey Road",
+      "record_type": "album",
+      "cover_xl": "https://cdn-images.dzcdn.net/images/cover/ab08841286faed60be3836909d386917/1000x1000-000000-80-0-0.jpg",
+      "nb_tracks": 17,
+      "artist": {
+        "id": 100917612,
+        "name": "The Beatles Complete On Ukulele"
+      }
+    },
+    {
+      "id": 71156162,
+      "title": "Bob Baldwin Presents: Abbey Road and The Beatles",
+      "record_type": "album",
+      "cover_xl": "https://cdn-images.dzcdn.net/images/cover/337d4b4cf5ad8fb507c0f4663b6ce40c/1000x1000-000000-80-0-0.jpg",
+      "nb_tracks": 12,
+      "artist": {
+        "id": 107942,
+        "name": "Bob Baldwin"
+      }
+    },
+    {
+      "id": 11561144,
+      "title": "Beatles Classics",
+      "record_type": "album",
+      "cover_xl": "https://cdn-images.dzcdn.net/images/cover/72de758e38dcdb8f2443a3ad11d23c1d/1000x1000-000000-80-0-0.jpg",
+      "nb_tracks": 12,
+      "artist": {
+        "id": 4018616,
+        "name": "Magical Abbey Road Band"
+      }
+    }
+  ],
+  "total": 42
+}

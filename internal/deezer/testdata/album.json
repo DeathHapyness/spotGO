@@ -1,0 +1,12 @@
+{
+  "id": 12047952,
+  "title": "Abbey Road (Remastered 2009)",
+  "release_date": "2015-12-24",
+  "record_type": "album",
+  "cover_xl": "https://cdn-images.dzcdn.net/images/cover/aa94ab293730bb7845d2aa8c672b2c29/1000x1000-000000-80-0-0.jpg",
+  "nb_tracks": 17,
+  "artist": {
+    "id": 1,
+    "name": "The Beatles"
+  }
+}
