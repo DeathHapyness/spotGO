@@ -76,12 +76,20 @@ func New(o Options) *Client {
 }
 
 func (c *Client) Get(ctx context.Context, r Request) ([]byte, error) {
+	if c.cacheEnabled(r) {
+		if body, ok := c.cacheGet(r); ok {
+			return body, nil
+		}
+	}
 	for attempt := 0; ; attempt++ {
 		if err := c.waitHost(ctx, r.URL); err != nil {
 			return nil, err
 		}
 		body, wait, err := c.do(ctx, r)
 		if err == nil {
+			if c.cacheEnabled(r) {
+				c.cachePut(r.URL, body)
+			}
 			return body, nil
 		}
 		if wait < 0 || attempt >= c.maxRetries {
