@@ -3,6 +3,7 @@ package fetch
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand/v2"
@@ -15,6 +16,9 @@ type Request struct {
 	URL      string
 	Header   http.Header
 	CacheTTL time.Duration
+	// Check valida respostas 2xx antes do cache. Um *RetryAfterError faz a
+	// requisição ser repetida como um 429; qualquer outro erro volta na hora.
+	Check func(body []byte) error
 }
 
 type Options struct {
@@ -140,7 +144,7 @@ func (c *Client) do(ctx context.Context, r Request) ([]byte, time.Duration, erro
 
 	switch {
 	case resp.StatusCode >= 200 && resp.StatusCode < 300:
-		return body, 0, nil
+		return c.check(r, body)
 	case resp.StatusCode == http.StatusTooManyRequests:
 		wait := c.retryAfter(resp.Header.Get("Retry-After"))
 		rl := &RateLimitError{RetryAfter: wait, URL: r.URL}
@@ -153,6 +157,21 @@ func (c *Client) do(ctx context.Context, r Request) ([]byte, time.Duration, erro
 	default:
 		return nil, -1, statusError(resp.StatusCode, r.URL, body)
 	}
+}
+
+func (c *Client) check(r Request, body []byte) ([]byte, time.Duration, error) {
+	if r.Check == nil {
+		return body, 0, nil
+	}
+	err := r.Check(body)
+	if err == nil {
+		return body, 0, nil
+	}
+	var ra *RetryAfterError
+	if errors.As(err, &ra) && ra.After <= c.maxWait {
+		return nil, ra.After, err
+	}
+	return nil, -1, err
 }
 
 func (c *Client) retryAfter(v string) time.Duration {

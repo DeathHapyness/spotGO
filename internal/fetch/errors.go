@@ -32,3 +32,16 @@ func host(raw string) string {
 	}
 	return u.Host
 }
+
+// RetryAfterError é devolvido por um Request.Check quando o corpo indica um
+// limite de requisições (por exemplo, o Deezer responde HTTP 200 com erro).
+type RetryAfterError struct {
+	After time.Duration
+	Err   error
+}
+
+func (e *RetryAfterError) Error() string {
+	return fmt.Sprintf("%v; tente de novo em %s", e.Err, e.After.Round(time.Second))
+}
+
+func (e *RetryAfterError) Unwrap() error { return e.Err }
