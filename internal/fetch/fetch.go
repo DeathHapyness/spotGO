@@ -34,6 +34,7 @@ type Client struct {
 	maxBody    int64
 	userAgent  string
 	cacheDir   string
+	limits     map[string]*limiter
 
 	sleep func(ctx context.Context, d time.Duration) error
 	now   func() time.Time
@@ -55,6 +56,7 @@ func New(o Options) *Client {
 		maxBody:    o.MaxBody,
 		userAgent:  o.UserAgent,
 		cacheDir:   o.CacheDir,
+		limits:     newLimiters(o.Limits),
 		sleep:      sleepCtx,
 		now:        time.Now,
 	}
@@ -75,6 +77,9 @@ func New(o Options) *Client {
 
 func (c *Client) Get(ctx context.Context, r Request) ([]byte, error) {
 	for attempt := 0; ; attempt++ {
+		if err := c.waitHost(ctx, r.URL); err != nil {
+			return nil, err
+		}
 		body, wait, err := c.do(ctx, r)
 		if err == nil {
 			return body, nil
