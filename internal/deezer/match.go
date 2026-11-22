@@ -6,7 +6,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/DeathHapyness/spotGO/internal/song"
 	"github.com/DeathHapyness/spotGO/internal/textnorm"
@@ -65,12 +64,15 @@ func pickTrack(src song.Song, knownAlbum string, cands []apiTrack) (apiTrack, bo
 // preferindo o mesmo número de faixas e as mesmas palavras de versão.
 func pickAlbum(name, artist string, nTracks int, cands []apiAlbum) (apiAlbum, bool) {
 	base, ver := textnorm.SplitTitle(name)
+	variants := textnorm.Variants(ver)
+	artists := splitArtists(artist)
 
 	var best apiAlbum
 	bestScore, found := math.MinInt, false
 	for _, c := range cands {
 		cBase, cVer := textnorm.SplitTitle(c.Title)
-		if cBase != base || !textnorm.SameArtist(artist, c.Artist.Name) {
+		if cBase != base || !anySameArtist(artists, c.Artist.Name) ||
+			!maps.Equal(textnorm.Variants(cVer), variants) {
 			continue
 		}
 		score := 0
@@ -98,7 +100,9 @@ func anySameArtist(artists []string, name string) bool {
 	return false
 }
 
-var compilationWords = []string{"greatest hits", "best of", "the very best", "collection", "anthology", "essential", "gold", "hits"}
+// Sem "gold", "hits" nem títulos só com números: "Fool's Gold", "21" e "1989"
+// são álbuns normais. A busca do Deezer não traz o record_type para decidir.
+var compilationWords = []string{"greatest hits", "best of", "the very best", "collection", "anthology", "essential", "essentials"}
 
 func isCompilation(albumTitle string) bool {
 	padded := " " + textnorm.Fold(albumTitle) + " "
@@ -107,6 +111,17 @@ func isCompilation(albumTitle string) bool {
 			return true
 		}
 	}
-	base, _ := textnorm.SplitTitle(albumTitle)
-	return base != "" && strings.IndexFunc(base, func(r rune) bool { return !unicode.IsDigit(r) }) < 0
+	return false
+}
+
+// splitArtists separa o "A, B" que o embed usa para álbuns com vários artistas.
+func splitArtists(s string) []string {
+	parts := strings.Split(s, ", ")
+	out := parts[:0]
+	for _, p := range parts {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }

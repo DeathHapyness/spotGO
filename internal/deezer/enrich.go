@@ -3,6 +3,7 @@ package deezer
 import (
 	"context"
 	"errors"
+	"maps"
 	"slices"
 	"time"
 
@@ -28,6 +29,14 @@ func (c *Client) EnrichTrack(ctx context.Context, s song.Song) (song.Song, bool,
 	}
 
 	out := s
+	out.ISRC = t.ISRC
+	if s.Album != "" {
+		known, _ := textnorm.SplitTitle(s.Album)
+		if got, _ := textnorm.SplitTitle(t.Album.Title); got != known {
+			// Mesma gravação, outro álbum: só o ISRC vale; números e capa seriam do álbum errado.
+			return out, true, nil
+		}
+	}
 	if out.Album == "" {
 		out.Album = t.Album.Title
 	}
@@ -40,7 +49,6 @@ func (c *Client) EnrichTrack(ctx context.Context, s song.Song) (song.Song, bool,
 	if out.TrackCount == 0 {
 		out.TrackCount = t.Album.NbTracks
 	}
-	out.ISRC = t.ISRC
 	out.TrackNumber = t.TrackPosition
 	out.DiscNumber = t.DiskNumber
 	if t.Album.CoverXL != "" {
@@ -53,7 +61,11 @@ func (c *Client) EnrichTrack(ctx context.Context, s song.Song) (song.Song, bool,
 // sem uma chamada por faixa. Devolve uma cópia; sem álbum, as songs originais.
 func (c *Client) EnrichAlbum(ctx context.Context, name, artist string, songs []song.Song) ([]song.Song, error) {
 	base, _ := textnorm.SplitTitle(name)
-	cands, err := c.searchAlbums(ctx, artist+" "+base)
+	main := artist
+	if a := splitArtists(artist); len(a) > 0 {
+		main = a[0]
+	}
+	cands, err := c.searchAlbums(ctx, main+" "+base)
 	if err != nil {
 		return songs, notFoundIsNil(err)
 	}
@@ -99,13 +111,14 @@ func (c *Client) EnrichAlbum(ctx context.Context, name, artist string, songs []s
 // matchAlbumTrack tenta primeiro a mesma posição e depois a primeira faixa
 // livre com o mesmo título base e duração compatível.
 func matchAlbumTrack(s song.Song, i int, tracks []apiTrack, used []bool) int {
-	base, _ := textnorm.SplitTitle(s.Title)
+	base, ver := textnorm.SplitTitle(s.Title)
+	variants := textnorm.Variants(ver)
 	fits := func(j int) bool {
 		if used[j] {
 			return false
 		}
-		tBase, _ := textnorm.SplitTitle(tracks[j].Title)
-		if tBase != base {
+		tBase, tVer := textnorm.SplitTitle(tracks[j].Title)
+		if tBase != base || !maps.Equal(textnorm.Variants(tVer), variants) {
 			return false
 		}
 		d := (s.Duration - time.Duration(tracks[j].Duration)*time.Second).Abs()

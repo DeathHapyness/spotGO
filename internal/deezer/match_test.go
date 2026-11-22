@@ -103,10 +103,9 @@ func TestPickAlbumAbbeyRoad(t *testing.T) {
 
 func TestIsCompilation(t *testing.T) {
 	cases := map[string]bool{
-		"1 (Remastered 2015)":          true,
 		"The Very Best Of":             true,
 		"Greatest Hits":                true,
-		"Beatles Gold":                 true,
+		"The Essential Bob Dylan":      true,
 		"Abbey Road (Remastered 2009)": false,
 		"Golden Hour":                  false,
 	}
@@ -114,5 +113,56 @@ func TestIsCompilation(t *testing.T) {
 		if got := isCompilation(title); got != want {
 			t.Errorf("isCompilation(%q) = %v, quero %v", title, got, want)
 		}
+	}
+}
+
+func TestIsCompilationNotNumberAlbums(t *testing.T) {
+	for _, title := range []string{"21", "1989", "1989 (Taylor's Version)", "Fool's Gold", "Gold Dust", "25"} {
+		if isCompilation(title) {
+			t.Errorf("isCompilation(%q) = true, é um álbum normal", title)
+		}
+	}
+}
+
+func TestPickTrackNumberAlbumNotPenalized(t *testing.T) {
+	cands := []apiTrack{
+		{ID: 1, Title: "Rolling in the Deep", Duration: 228, Artist: apiArtist{Name: "Adele"}, Album: apiAlbum{Title: "Rolling in the Deep"}},
+		{ID: 2, Title: "Rolling in the Deep", Duration: 228, Artist: apiArtist{Name: "Adele"}, Album: apiAlbum{Title: "21"}},
+	}
+	src := song.Song{Title: "Rolling in the Deep", Artists: []string{"Adele"}, Album: "21", Duration: 228 * time.Second}
+	if got, ok := pickTrack(src, src.Album, cands); !ok || got.ID != 2 {
+		t.Fatalf("pickTrack = %d, %v; quero o do álbum 21", got.ID, ok)
+	}
+}
+
+func TestPickAlbumRejectsVariants(t *testing.T) {
+	cands := []apiAlbum{{ID: 1, Title: "Hell Freezes Over", NbTracks: 15, Artist: apiArtist{Name: "Eagles"}}}
+	if got, ok := pickAlbum("Hell Freezes Over (Live)", "Eagles", 15, cands); ok {
+		t.Fatalf("álbum ao vivo aceitou edição de estúdio %d", got.ID)
+	}
+	cands[0].Title = "Hell Freezes Over (Live)"
+	if _, ok := pickAlbum("Hell Freezes Over", "Eagles", 15, cands); ok {
+		t.Fatal("álbum de estúdio aceitou edição ao vivo")
+	}
+}
+
+func TestPickAlbumMultiArtist(t *testing.T) {
+	cands := []apiAlbum{{ID: 7, Title: "Watch the Throne", NbTracks: 12, Artist: apiArtist{Name: "JAY-Z"}}}
+	if got, ok := pickAlbum("Watch the Throne", "JAY-Z, Kanye West", 12, cands); !ok || got.ID != 7 {
+		t.Fatalf("pickAlbum = %d, %v; quero 7", got.ID, ok)
+	}
+}
+
+func TestMatchAlbumTrackRejectsVariants(t *testing.T) {
+	tracks := []apiTrack{
+		{Title: "Hotel California", Duration: 390},
+		{Title: "Hotel California (Live)", Duration: 392},
+	}
+	src := song.Song{Title: "Hotel California - Live", Duration: 391 * time.Second}
+	if j := matchAlbumTrack(src, 0, tracks, make([]bool, 2)); j != 1 {
+		t.Fatalf("matchAlbumTrack = %d, quero 1 (a versão ao vivo)", j)
+	}
+	if j := matchAlbumTrack(src, 0, tracks[:1], make([]bool, 1)); j != -1 {
+		t.Fatalf("matchAlbumTrack = %d, quero -1 (só existe a de estúdio)", j)
 	}
 }

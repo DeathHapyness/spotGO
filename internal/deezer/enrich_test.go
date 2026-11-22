@@ -190,3 +190,41 @@ func TestAlbumSongs(t *testing.T) {
 		}
 	}
 }
+
+func TestEnrichTrackOtherAlbumOnlyISRC(t *testing.T) {
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/search":
+			w.Write([]byte(`{"data":[{"id":5,"title":"Come Together (Remastered 2015)","duration":258,"artist":{"name":"The Beatles"},"album":{"title":"1 (Remastered 2015)"}}],"total":1}`))
+		case "/track/5":
+			w.Write([]byte(`{"id":5,"title":"Come Together (Remastered 2015)","isrc":"GBAYE0601690","duration":258,"track_position":13,"disk_number":1,"release_date":"2015-11-06","artist":{"name":"The Beatles"},"album":{"title":"1 (Remastered 2015)","nb_tracks":27,"cover_xl":"http://capa-do-1.jpg","release_date":"2015-11-06"}}`))
+		default:
+			w.Write(fixture(t, "error_800.json"))
+		}
+	})
+	c, _ := newTestClient(t, h, "")
+	src := song.Song{Title: "Come Together - Remastered 2009", Artists: []string{"The Beatles"}, Album: "Abbey Road (Remastered 2009)", Duration: 259946 * time.Millisecond}
+
+	got, ok, err := c.EnrichTrack(context.Background(), src)
+	if err != nil || !ok {
+		t.Fatalf("ok=%v err=%v", ok, err)
+	}
+	want := src
+	want.ISRC = "GBAYE0601690"
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("misturou dados de outro álbum:\n got %+v\nwant %+v", got, want)
+	}
+}
+
+func TestEnrichAlbumMultiArtistQuery(t *testing.T) {
+	c, rec := newTestClient(t, fixtureServer(t), "")
+	if _, err := c.EnrichAlbum(context.Background(), "Abbey Road (Remastered 2009)", "The Beatles, Billy Preston", albumSongs()); err != nil {
+		t.Fatal(err)
+	}
+	if q := rec.reqs[0].URL.Query().Get("q"); q != "The Beatles abbey road" {
+		t.Fatalf("query = %q, quero só o artista principal", q)
+	}
+	if len(rec.reqs) != 3 {
+		t.Fatalf("requisições = %d, quero 3 (busca + álbum + faixas)", len(rec.reqs))
+	}
+}
