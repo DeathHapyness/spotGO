@@ -35,7 +35,8 @@ type Result struct {
 	Songs  []song.Song
 	// Unmatched conta as faixas sem ISRC no fim (sem dados do Deezer), incluindo as de Failed.
 	Unmatched int
-	// Failed conta as consultas ao Deezer que deram erro de rede.
+	// Failed conta as consultas ao Deezer que deram erro de rede: faixas, ou
+	// álbuns da discografia no caso de um artista.
 	Failed    int
 	Truncated bool
 }

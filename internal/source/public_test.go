@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -161,5 +162,157 @@ func TestEmbedError(t *testing.T) {
 		if _, err := NewPublic(e, &fakeMeta{}).Resolve(context.Background(), song.Ref{Kind: k, ID: "x"}); !errors.Is(err, embed.ErrNotFound) {
 			t.Errorf("%s: err = %v, quero embed.ErrNotFound", k, err)
 		}
+	}
+}
+
+func albumEmbed(songs []song.Song) *fakeEmbed {
+	return &fakeEmbed{cols: map[song.Kind]embed.Collection{song.KindAlbum: {Name: "Disco", Artist: "Artista", Songs: songs}}}
+}
+
+func withISRC(songs []song.Song, titles ...string) []song.Song {
+	out := slices.Clone(songs)
+	for i := range out {
+		if slices.Contains(titles, out[i].Title) {
+			out[i].ISRC = "ALB-" + out[i].Title
+		}
+	}
+	return out
+}
+
+func TestAlbumFallbackOnlyMissing(t *testing.T) {
+	m := &fakeMeta{album: func(s []song.Song) ([]song.Song, error) { return withISRC(s, "A", "C"), nil }}
+	p := NewPublic(albumEmbed(titles("A", "B", "C")), m)
+	var progress []string
+	p.Progress = func(done, total int) { progress = append(progress, fmt.Sprintf("%d/%d", done, total)) }
+
+	r, err := p.Resolve(context.Background(), song.Ref{Kind: song.KindAlbum, ID: "a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(m.enriched, []string{"B"}) {
+		t.Fatalf("EnrichTrack chamado com %v, quero só [B]", m.enriched)
+	}
+	got := []string{r.Songs[0].ISRC, r.Songs[1].ISRC, r.Songs[2].ISRC}
+	if !slices.Equal(got, []string{"ALB-A", "ISRC-B", "ALB-C"}) {
+		t.Fatalf("ISRCs = %v", got)
+	}
+	if r.Unmatched != 0 || r.Name != "Disco" || r.Artist != "Artista" {
+		t.Fatalf("Result = %+v", r)
+	}
+	if strings.Join(progress, ",") != "1/1" {
+		t.Fatalf("progress = %v, quero [1/1]", progress)
+	}
+}
+
+func TestAlbumNothingMatched(t *testing.T) {
+	m := &fakeMeta{}
+	r, err := NewPublic(albumEmbed(titles("A", "B", "C")), m).Resolve(context.Background(), song.Ref{Kind: song.KindAlbum, ID: "a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(m.enriched, []string{"A", "B", "C"}) {
+		t.Fatalf("EnrichTrack chamado com %v", m.enriched)
+	}
+	if r.Unmatched != 0 {
+		t.Fatalf("Unmatched = %d", r.Unmatched)
+	}
+}
+
+func TestAlbumEnrichError(t *testing.T) {
+	m := &fakeMeta{album: func(s []song.Song) ([]song.Song, error) { return s, errors.New("conexão recusada") }}
+	r, err := NewPublic(albumEmbed(titles("A", "B", "C")), m).Resolve(context.Background(), song.Ref{Kind: song.KindAlbum, ID: "a"})
+	if err != nil {
+		t.Fatalf("err = %v, quero nil (fallback por faixa)", err)
+	}
+	if !slices.Equal(m.enriched, []string{"A", "B", "C"}) || r.Unmatched != 0 {
+		t.Fatalf("enriched = %v, Unmatched = %d", m.enriched, r.Unmatched)
+	}
+}
+
+func TestAlbumCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	m := &fakeMeta{album: func(s []song.Song) ([]song.Song, error) { cancel(); return s, context.Canceled }}
+	_, err := NewPublic(albumEmbed(titles("A", "B")), m).Resolve(ctx, song.Ref{Kind: song.KindAlbum, ID: "a"})
+	if !errors.Is(err, context.Canceled) || len(m.enriched) != 0 {
+		t.Fatalf("err = %v, enriched = %v", err, m.enriched)
+	}
+}
+
+func artistSetup(m *fakeMeta) *Public {
+	e := &fakeEmbed{cols: map[song.Kind]embed.Collection{song.KindArtist: {Name: "The Beatles", Songs: titles("top1")}}}
+	return NewPublic(e, m)
+}
+
+func TestArtistDedup(t *testing.T) {
+	m := &fakeMeta{
+		disco: []deezer.AlbumRef{{ID: 1, Title: "Disco"}, {ID: 2, Title: "Disco (Deluxe)"}},
+		albumSongs: map[int64][]song.Song{
+			1: {{Title: "x", ISRC: "X"}, {Title: "y", ISRC: "Y"}},
+			2: {{Title: "x", ISRC: "X"}, {Title: "y", ISRC: "Y"}, {Title: "z", ISRC: "Z"}, {Title: "sem"}, {Title: "sem"}},
+		},
+	}
+	p := artistSetup(m)
+	var progress []string
+	p.Progress = func(done, total int) { progress = append(progress, fmt.Sprintf("%d/%d", done, total)) }
+
+	r, err := p.Resolve(context.Background(), song.Ref{Kind: song.KindArtist, ID: "ar"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, s := range r.Songs {
+		got = append(got, s.Title)
+	}
+	if !slices.Equal(got, []string{"x", "y", "z", "sem", "sem"}) {
+		t.Fatalf("faixas = %v", got)
+	}
+	if r.Name != "The Beatles" || r.Artist != "The Beatles" || r.Unmatched != 2 {
+		t.Fatalf("Result = %+v", r)
+	}
+	if strings.Join(progress, ",") != "1/2,2/2" {
+		t.Fatalf("progress = %v", progress)
+	}
+	if len(m.enriched) != 0 {
+		t.Fatalf("artista não deve chamar EnrichTrack: %v", m.enriched)
+	}
+}
+
+func TestArtistNotFound(t *testing.T) {
+	m := &fakeMeta{discoErr: deezer.ErrNotFound}
+	_, err := artistSetup(m).Resolve(context.Background(), song.Ref{Kind: song.KindArtist, ID: "ar"})
+	if !errors.Is(err, deezer.ErrNotFound) || !strings.Contains(err.Error(), "The Beatles") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestArtistAlbumError(t *testing.T) {
+	m := &fakeMeta{
+		disco:      []deezer.AlbumRef{{ID: 1}, {ID: 2}},
+		albumSongs: map[int64][]song.Song{2: {{Title: "z", ISRC: "Z"}}},
+		albumErr:   map[int64]error{1: errors.New("conexão recusada")},
+	}
+	r, err := artistSetup(m).Resolve(context.Background(), song.Ref{Kind: song.KindArtist, ID: "ar"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(r.Songs) != 1 || r.Songs[0].ISRC != "Z" || r.Failed != 1 {
+		t.Fatalf("Result = %+v", r)
+	}
+}
+
+func TestArtistAlbumCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	m := &fakeMeta{disco: []deezer.AlbumRef{{ID: 1}}, albumErr: map[int64]error{1: context.Canceled}}
+	if _, err := artistSetup(m).Resolve(ctx, song.Ref{Kind: song.KindArtist, ID: "ar"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestArtistDiscographyNetworkError(t *testing.T) {
+	m := &fakeMeta{discoErr: errors.New("conexão recusada")}
+	_, err := artistSetup(m).Resolve(context.Background(), song.Ref{Kind: song.KindArtist, ID: "ar"})
+	if err == nil || strings.Contains(err.Error(), "não encontrado") || !strings.Contains(err.Error(), "conexão recusada") {
+		t.Fatalf("err = %v", err)
 	}
 }
