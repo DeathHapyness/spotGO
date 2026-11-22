@@ -39,10 +39,13 @@ Não precisa de conta nem de credenciais.`,
 			r := newResolver(progress)
 
 			var results []source.Result
-			failed := 0
-			for i, link := range args {
+			failed, printed := 0, 0
+			for _, link := range args {
 				res, err := resolveLink(cmd, r, link)
 				clearProgress(stderr, progress)
+				if ctxErr := cmd.Context().Err(); ctxErr != nil {
+					return fmt.Errorf("interrompido: %w", ctxErr)
+				}
 				if err != nil {
 					failed++
 					fmt.Fprintf(stderr, "erro: %s: %v\n", link, err)
@@ -51,10 +54,11 @@ Não precisa de conta nem de credenciais.`,
 				if asJSON {
 					results = append(results, res)
 				} else {
-					if i > 0 {
+					if printed > 0 {
 						fmt.Fprintln(cmd.OutOrStdout())
 					}
 					printResult(cmd.OutOrStdout(), res)
+					printed++
 				}
 				printWarnings(stderr, res)
 			}
@@ -82,7 +86,11 @@ func resolveLink(cmd *cobra.Command, r resolver, link string) (source.Result, er
 }
 
 func printResult(w io.Writer, r source.Result) {
-	fmt.Fprintf(w, "%s — %s  [%s, %d faixas]\n", r.Name, r.Artist, kindNames[r.Ref.Kind], len(r.Songs))
+	plural := "faixas"
+	if len(r.Songs) == 1 {
+		plural = "faixa"
+	}
+	fmt.Fprintf(w, "%s — %s  [%s, %d %s]\n", r.Name, r.Artist, kindNames[r.Ref.Kind], len(r.Songs), plural)
 	for i, s := range r.Songs {
 		fmt.Fprintf(w, "%3d. %s — %s | %s | %s | %s\n", i+1, s.Title, strings.Join(s.Artists, ", "),
 			orDash(s.Album), formatDuration(s.Duration), orDash(s.ISRC))

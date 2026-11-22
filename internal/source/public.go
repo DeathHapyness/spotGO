@@ -105,8 +105,21 @@ func (p *Public) artist(ctx context.Context, r *Result) error {
 	case err != nil:
 		return fmt.Errorf("discografia de %q: %w", col.Name, err)
 	}
+	if len(albums) == 0 {
+		albums, err = p.meta.Discography(ctx, col.Name, []string{"album", "single", "ep"})
+		if err != nil {
+			return fmt.Errorf("discografia de %q: %w", col.Name, err)
+		}
+	}
+	if len(albums) == 0 {
+		return fmt.Errorf("nenhum lançamento de %q no Deezer", col.Name)
+	}
 	seen := map[string]bool{}
 	for n, a := range albums {
+		// Respostas em cache não olham o ctx; sem isto, Ctrl+C não pararia um artista já visto.
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		songs, err := p.meta.AlbumSongs(ctx, a.ID)
 		if err != nil {
 			if ctx.Err() != nil {
@@ -134,6 +147,9 @@ func (p *Public) artist(ctx context.Context, r *Result) error {
 // Erro de rede mantém a faixa como veio; cancelamento interrompe tudo.
 func (p *Public) enrichEach(ctx context.Context, r *Result, idx []int) error {
 	for n, i := range idx {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		s, _, err := p.meta.EnrichTrack(ctx, r.Songs[i])
 		if err != nil {
 			if ctx.Err() != nil {

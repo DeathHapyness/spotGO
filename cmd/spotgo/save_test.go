@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -20,11 +21,17 @@ const (
 )
 
 type fakeResolver struct {
-	results map[string]source.Result
-	errs    map[string]error
+	results  map[string]source.Result
+	errs     map[string]error
+	onCall   func()
+	resolved []string
 }
 
 func (f *fakeResolver) Resolve(_ context.Context, ref song.Ref) (source.Result, error) {
+	f.resolved = append(f.resolved, ref.ID)
+	if f.onCall != nil {
+		f.onCall()
+	}
 	if err := f.errs[ref.ID]; err != nil {
 		return source.Result{}, err
 	}
@@ -47,12 +54,18 @@ func abbeyRoad() source.Result {
 
 func runSave(t *testing.T, r resolver, args ...string) (stdout, stderr string, err error) {
 	t.Helper()
+	return runSaveCtx(t, context.Background(), r, args...)
+}
+
+func runSaveCtx(t *testing.T, ctx context.Context, r resolver, args ...string) (stdout, stderr string, err error) {
+	t.Helper()
 	cmd := newSaveCmd(func(func(int, int)) resolver { return r })
+	cmd.SilenceUsage, cmd.SilenceErrors = true, true // como no comando raiz
 	var out, errb bytes.Buffer
 	cmd.SetOut(&out)
 	cmd.SetErr(&errb)
 	cmd.SetArgs(args)
-	err = cmd.ExecuteContext(context.Background())
+	err = cmd.ExecuteContext(ctx)
 	return out.String(), errb.String(), err
 }
 
@@ -155,5 +168,37 @@ func TestRootHasSave(t *testing.T) {
 	cmd, _, err := newRootCmd().Find([]string{"save"})
 	if err != nil || cmd.Name() != "save" {
 		t.Fatalf("comando save não registrado: %v", err)
+	}
+}
+
+func TestSaveStopsOnCancel(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	other := "1111111111111111111111"
+	r := &fakeResolver{
+		results: map[string]source.Result{idBom: abbeyRoad(), other: abbeyRoad()},
+		onCall:  cancel,
+	}
+	out, errOut, err := runSaveCtx(t, ctx, r, "--json", albumURL(idBom), albumURL(other))
+	if !errors.Is(err, context.Canceled) || !strings.Contains(err.Error(), "interrompido") {
+		t.Fatalf("err = %v, quero \"interrompido\" envolvendo context.Canceled", err)
+	}
+	if len(r.resolved) != 1 {
+		t.Fatalf("resolveu %v depois do Ctrl+C", r.resolved)
+	}
+	if out != "" || strings.Contains(errOut, "erro:") {
+		t.Fatalf("imprimiu depois do Ctrl+C: stdout=%q stderr=%q", out, errOut)
+	}
+}
+
+func TestSaveSingularAndNoLeadingBlank(t *testing.T) {
+	one := source.Result{Name: "A", Artist: "X", Songs: []song.Song{{Title: "A"}}}
+	r := &fakeResolver{results: map[string]source.Result{idBom: one}}
+	out, _, _ := runSave(t, r, "https://exemplo.com/x", albumURL(idBom))
+	if strings.HasPrefix(out, "\n") {
+		t.Errorf("stdout começa com linha em branco: %q", out)
+	}
+	if !strings.Contains(out, "[álbum, 1 faixa]") {
+		t.Errorf("cabeçalho = %q, quero \"1 faixa\"", out)
 	}
 }

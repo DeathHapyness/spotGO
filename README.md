@@ -31,7 +31,7 @@ usuários**. Quando a cota estoura, a ferramenta quebra para todo mundo ao mesmo
 - **Não precisa de conta nem de credenciais.** A lista de faixas vem da página pública de embed do
   Spotify e os metadados (álbum, número da faixa, ISRC, capa 1000×1000) vêm da API pública do Deezer.
 - **Faz menos requisições:** cache em disco, limite de taxa por site e retry que respeita o `Retry-After`.
-- **É mais rápido e mais leve:** binário único em Go, downloads em paralelo e uma única passada do ffmpeg por faixa.
+- **É leve:** binário único em Go, sem Python. O download vai ser em paralelo, com uma única passada do ffmpeg por faixa.
 - **Credenciais próprias são opcionais**, para quem tem Spotify Premium e quer playlists com mais de 100 faixas
   (veja [Modo avançado](#modo-avançado-opcional)).
 
@@ -122,15 +122,20 @@ spotgo save --json https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M | jq
   O spotgo avisa quando uma playlist bate esse limite.
 - **Faixas que não estão no Deezer** saem só com título, artistas e duração, sem álbum, número da faixa e
   capa em alta. Elas nunca são descartadas, e o spotgo avisa quantas foram.
-- **Artistas:** a discografia vem do Deezer, que pode ter um catálogo um pouco diferente do Spotify.
+- **Artistas:** a discografia vem do Deezer, que pode ter um catálogo um pouco diferente do Spotify. Entram
+  só os álbuns; singles e EPs entram apenas quando o artista não tem nenhum álbum.
 
 </details>
 
 ## Modo avançado (opcional)
 
+> [!NOTE]
+> **Ainda não é usado.** Por enquanto, `spotgo auth` só guarda e testa as credenciais; todas as operações
+> usam o modo sem credenciais. O uso delas (com `spotgo login`) chega numa próxima etapa.
+
 Exige **Spotify Premium**: desde fevereiro de 2026, a Web API do Spotify só funciona para apps cujo dono
-tenha Premium. Ninguém precisa disso para usar o spotgo. É útil para quem quer playlists próprias com mais
-de 100 faixas e metadados exatos do Spotify.
+tenha Premium. Ninguém precisa disso para usar o spotgo. Vai ser útil para quem quer playlists próprias com
+mais de 100 faixas e metadados exatos do Spotify.
 
 1. Acesse <https://developer.spotify.com/dashboard> e crie um app
    (qualquer nome; em *Redirect URI* use `http://127.0.0.1:8888/callback`).

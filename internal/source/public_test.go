@@ -37,7 +37,9 @@ type fakeMeta struct {
 	onEnrich   func(ctx context.Context, n int)
 	album      func([]song.Song) ([]song.Song, error)
 	disco      []deezer.AlbumRef
+	discoTypes func(types []string) []deezer.AlbumRef
 	discoErr   error
+	ignoreCtx  bool // simula respostas vindas do cache, que não olham o ctx
 	albumSongs map[int64][]song.Song
 	albumErr   map[int64]error
 }
@@ -47,7 +49,7 @@ func (f *fakeMeta) EnrichTrack(ctx context.Context, s song.Song) (song.Song, boo
 	if f.onEnrich != nil {
 		f.onEnrich(ctx, len(f.enriched))
 	}
-	if err := ctx.Err(); err != nil {
+	if err := ctx.Err(); err != nil && !f.ignoreCtx {
 		return s, false, err
 	}
 	switch {
@@ -67,7 +69,10 @@ func (f *fakeMeta) EnrichAlbum(_ context.Context, _, _ string, songs []song.Song
 	return f.album(songs)
 }
 
-func (f *fakeMeta) Discography(context.Context, string, []string) ([]deezer.AlbumRef, error) {
+func (f *fakeMeta) Discography(_ context.Context, _ string, types []string) ([]deezer.AlbumRef, error) {
+	if f.discoTypes != nil {
+		return f.discoTypes(types), f.discoErr
+	}
 	return f.disco, f.discoErr
 }
 
@@ -314,5 +319,48 @@ func TestArtistDiscographyNetworkError(t *testing.T) {
 	_, err := artistSetup(m).Resolve(context.Background(), song.Ref{Kind: song.KindArtist, ID: "ar"})
 	if err == nil || strings.Contains(err.Error(), "não encontrado") || !strings.Contains(err.Error(), "conexão recusada") {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestPlaylistCanceledCached(t *testing.T) {
+	e := &fakeEmbed{cols: map[song.Kind]embed.Collection{song.KindPlaylist: {Songs: titles("A", "B", "C")}}}
+	ctx, cancel := context.WithCancel(context.Background())
+	m := &fakeMeta{ignoreCtx: true, onEnrich: func(_ context.Context, n int) {
+		if n == 1 {
+			cancel()
+		}
+	}}
+	_, err := NewPublic(e, m).Resolve(ctx, song.Ref{Kind: song.KindPlaylist, ID: "p"})
+	if !errors.Is(err, context.Canceled) || len(m.enriched) != 1 {
+		t.Fatalf("err = %v, enriched = %v; quero Canceled depois de 1 faixa", err, m.enriched)
+	}
+}
+
+func TestArtistOnlySingles(t *testing.T) {
+	var asked [][]string
+	m := &fakeMeta{
+		discoTypes: func(types []string) []deezer.AlbumRef {
+			asked = append(asked, types)
+			if slices.Contains(types, "single") {
+				return []deezer.AlbumRef{{ID: 3}}
+			}
+			return nil
+		},
+		albumSongs: map[int64][]song.Song{3: {{Title: "s", ISRC: "S"}}},
+	}
+	r, err := artistSetup(m).Resolve(context.Background(), song.Ref{Kind: song.KindArtist, ID: "ar"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(r.Songs) != 1 || r.Songs[0].ISRC != "S" {
+		t.Fatalf("Songs = %+v (tipos pedidos: %v)", r.Songs, asked)
+	}
+}
+
+func TestArtistNoReleases(t *testing.T) {
+	m := &fakeMeta{discoTypes: func([]string) []deezer.AlbumRef { return nil }}
+	_, err := artistSetup(m).Resolve(context.Background(), song.Ref{Kind: song.KindArtist, ID: "ar"})
+	if err == nil || !strings.Contains(err.Error(), "The Beatles") {
+		t.Fatalf("err = %v, quero erro citando o artista", err)
 	}
 }
