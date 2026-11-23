@@ -4,6 +4,8 @@ import (
 	"math"
 	"slices"
 	"testing"
+
+	"github.com/DeathHapyness/spotGO/internal/song"
 )
 
 func near(a, b float64) bool { return math.Abs(a-b) < 0.01 }
@@ -131,5 +133,12 @@ func TestSongTitle(t *testing.T) {
 	}
 	if got := songTitle("X", nil); got != "X" {
 		t.Errorf("songTitle sem artistas = %q", got)
+	}
+}
+
+func TestQuery(t *testing.T) {
+	s := song.Song{Title: "Down", Artists: []string{"Jay Sean", "Lil Wayne"}}
+	if got := Query(s); got != "jay sean, lil wayne - down" {
+		t.Errorf("Query = %q", got)
 	}
 }

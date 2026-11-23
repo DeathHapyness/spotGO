@@ -8,9 +8,10 @@ import (
 )
 
 var defaultLimits = map[string]time.Duration{
-	"api.deezer.com":   100 * time.Millisecond,
-	"open.spotify.com": 250 * time.Millisecond,
-	"api.spotify.com":  100 * time.Millisecond,
+	"api.deezer.com":    100 * time.Millisecond,
+	"open.spotify.com":  250 * time.Millisecond,
+	"api.spotify.com":   100 * time.Millisecond,
+	"music.youtube.com": 200 * time.Millisecond,
 }
 
 type limiter struct {

@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/mozillazg/go-unidecode"
+
+	"github.com/DeathHapyness/spotGO/internal/song"
 )
 
 var apostrophes = strings.NewReplacer("'", "", "’", "")
@@ -136,4 +138,9 @@ func songTitle(name string, artists []string) string {
 		return name
 	}
 	return strings.Join(artists, ", ") + " - " + name
+}
+
+// Query é a consulta de busca do spotDL: "artista, outro - título" em minúsculas.
+func Query(s song.Song) string {
+	return strings.ToLower(songTitle(s.Title, s.Artists))
 }
