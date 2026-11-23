@@ -71,11 +71,19 @@ func (c *Client) Search(ctx context.Context, query string, k kind) ([]matching.R
 	if err != nil {
 		return nil, err
 	}
+	// O clientVersion muda todo dia; sem ele na chave, o cache dura as 24 h
+	// inteiras e a busca do dia seguinte sobrescreve o mesmo arquivo.
+	b.Context.Client.ClientVersion = ""
+	key, err := json.Marshal(b)
+	if err != nil {
+		return nil, err
+	}
 
 	body, err := c.f.Get(ctx, fetch.Request{
-		Method: http.MethodPost,
-		URL:    c.base + searchPath,
-		Body:   payload,
+		Method:   http.MethodPost,
+		URL:      c.base + searchPath,
+		Body:     payload,
+		CacheKey: key,
 		Header: http.Header{
 			"Content-Type": {"application/json"},
 			"Origin":       {"https://music.youtube.com"},
@@ -128,12 +136,12 @@ func (c *Client) Find(ctx context.Context, s song.Song) (matching.Scored, error)
 			if sc.Score > top.Score {
 				top = sc
 			}
+			// Só os aprovados pelo matching: a busca por ISRC às vezes devolve
+			// músicas populares sem relação com a faixa.
+			isrcURLs[sc.Result.URL] = true
 		}
 		if top.Score > goodScore {
 			return top, nil
-		}
-		for _, r := range rs {
-			isrcURLs[r.URL] = true
 		}
 	}
 

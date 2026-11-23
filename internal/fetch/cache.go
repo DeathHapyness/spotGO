@@ -23,8 +23,12 @@ func DefaultCacheDir() (string, error) {
 // cachePath sem corpo continua sendo sha256(URL), para o cache antigo valer.
 func (c *Client) cachePath(r Request) string {
 	key := r.URL
-	if r.Body != nil {
-		key += "\x00" + r.Method + "\x00" + string(r.Body)
+	body := r.Body
+	if r.CacheKey != nil {
+		body = r.CacheKey
+	}
+	if body != nil {
+		key += "\x00" + r.Method + "\x00" + string(body)
 	}
 	sum := sha256.Sum256([]byte(key))
 	h := hex.EncodeToString(sum[:])

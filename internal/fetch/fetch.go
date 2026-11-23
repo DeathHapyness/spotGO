@@ -16,7 +16,10 @@ import (
 type Request struct {
 	Method string // "" = GET
 	// Body é reenviado a cada tentativa e entra na chave do cache.
-	Body     []byte
+	Body []byte
+	// CacheKey substitui o Body na chave do cache (para tirar dele campos que
+	// mudam sem mudar a resposta).
+	CacheKey []byte
 	URL      string
 	Header   http.Header
 	CacheTTL time.Duration

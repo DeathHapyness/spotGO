@@ -223,6 +223,7 @@ var (
 	viewsLike    = regexp.MustCompile(`^\d[^ ]* [^ ]*$`)
 	durationLike = regexp.MustCompile(`^(\d+:)*\d+:\d+$`)
 	yearLike     = regexp.MustCompile(`^\d{4}$`)
+	noViews      = regexp.MustCompile(`^No (?:views|plays)$`)
 	viewsRe      = regexp.MustCompile(`^(\d[\d,]*(?:\.\d+)?)([KMB]?) (?:plays?|views?)$`)
 )
 
@@ -240,9 +241,16 @@ func fillRuns(r *matching.Result, runs []run) {
 			}
 			continue
 		}
+		if i > 0 && noViews.MatchString(t) {
+			continue
+		}
+		if i > 0 && viewsLike.MatchString(t) {
+			if v, ok := parseViews(t); ok {
+				r.Views = v
+				continue
+			}
+		}
 		switch {
-		case viewsLike.MatchString(t) && i > 0:
-			r.Views, _ = parseViews(t)
 		case durationLike.MatchString(t):
 			r.Duration, _ = parseDuration(t)
 		case yearLike.MatchString(t):
