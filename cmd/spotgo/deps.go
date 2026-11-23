@@ -15,6 +15,7 @@ import (
 
 	"github.com/DeathHapyness/spotGO/internal/config"
 	"github.com/DeathHapyness/spotGO/internal/deezer"
+	"github.com/DeathHapyness/spotGO/internal/deps"
 	"github.com/DeathHapyness/spotGO/internal/embed"
 	"github.com/DeathHapyness/spotGO/internal/fetch"
 	"github.com/DeathHapyness/spotGO/internal/provider/ytmusic"
@@ -41,6 +42,26 @@ func newPublicResolver(progress func(done, total int)) *source.Public {
 
 func newYTMusic() *ytmusic.Client {
 	return ytmusic.New(newFetch())
+}
+
+func newSetupDeps(progress func(t deps.Tool, done, total int64)) setupDeps {
+	dir, err := deps.ManagedDir()
+	if err != nil {
+		dir = ""
+	}
+	in := &deps.Installer{Dir: dir, Progress: progress}
+	loc := &deps.Locator{Dir: dir}
+	return setupDeps{
+		locate: loc.LocateAll,
+		install: func(ctx context.Context, t deps.Tool) (string, error) {
+			if dir == "" {
+				return "", err
+			}
+			return in.Install(ctx, t)
+		},
+		version: loc.Version,
+		now:     time.Now,
+	}
 }
 
 func newFetch() *fetch.Client {

@@ -3,6 +3,7 @@ package deps
 import (
 	"archive/tar"
 	"archive/zip"
+	"bufio"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -238,24 +239,29 @@ func extract(src *os.File, a Asset, dst io.Writer) error {
 		return fmt.Errorf("%w (%s)", errNoMember, a.Member)
 
 	case TarXZ:
-		xr, err := xz.NewReader(src)
-		if err != nil {
-			return fmt.Errorf("xz inválido: %w", err)
-		}
-		tr := tar.NewReader(xr)
-		for {
-			hdr, err := tr.Next()
-			if err == io.EOF {
-				return fmt.Errorf("%w (%s)", errNoMember, a.Member)
-			}
-			if err != nil {
-				return fmt.Errorf("tar inválido: %w", err)
-			}
-			if hdr.Typeflag == tar.TypeReg && matchesMember(hdr.Name, a.Member) {
-				_, err = io.Copy(dst, tr)
-				return err
-			}
-		}
+		return extractTarXZ(src, a.Member, dst)
 	}
 	return fmt.Errorf("formato de arquivo desconhecido")
+}
+
+func extractTarXZ(src io.Reader, member string, dst io.Writer) error {
+	// O leitor de xz lê byte a byte; sem buffer, cada byte vira uma syscall.
+	xr, err := xz.NewReader(bufio.NewReaderSize(src, 1<<20))
+	if err != nil {
+		return fmt.Errorf("xz inválido: %w", err)
+	}
+	tr := tar.NewReader(xr)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			return fmt.Errorf("%w (%s)", errNoMember, member)
+		}
+		if err != nil {
+			return fmt.Errorf("tar inválido: %w", err)
+		}
+		if hdr.Typeflag == tar.TypeReg && matchesMember(hdr.Name, member) {
+			_, err = io.Copy(dst, tr)
+			return err
+		}
+	}
 }

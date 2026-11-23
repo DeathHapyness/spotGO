@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -230,5 +231,33 @@ func TestManagedDirEnv(t *testing.T) {
 	t.Setenv("SPOTGO_BIN_DIR", "/tmp/x/bin")
 	if d, err := ManagedDir(); err != nil || d != "/tmp/x/bin" {
 		t.Fatalf("ManagedDir = %q, %v", d, err)
+	}
+}
+
+type countingReader struct {
+	r     io.Reader
+	reads int
+}
+
+func (c *countingReader) Read(p []byte) (int, error) {
+	c.reads++
+	return c.r.Read(p)
+}
+
+// Sem buffer, o leitor de xz faz uma leitura por byte; com o ffmpeg real
+// (150 MB) a extração levava mais de 2 minutos.
+func TestExtractTarXZBuffered(t *testing.T) {
+	big := strings.Repeat("ffmpeg-binario-", 1<<16) // ~1 MB
+	x := makeTarXZ(t, map[string]string{"pkg/bin/ffmpeg": big})
+	src := &countingReader{r: bytes.NewReader(x)}
+	var out bytes.Buffer
+	if err := extractTarXZ(src, "bin/ffmpeg", &out); err != nil {
+		t.Fatal(err)
+	}
+	if out.String() != big {
+		t.Fatalf("conteúdo extraído errado (%d bytes)", out.Len())
+	}
+	if src.reads > 100 {
+		t.Fatalf("%d leituras para %d bytes comprimidos; falta buffer", src.reads, len(x))
 	}
 }

@@ -67,12 +67,21 @@ O spotGO usa o [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) para baixar o áudio
 [`ffmpeg`](https://ffmpeg.org) para converter e gravar as tags, e o [`deno`](https://deno.com), que o
 yt-dlp exige hoje para alguns vídeos do YouTube.
 
-Em breve, `spotgo setup` vai baixá-los e conferir o checksum de cada um, guardando tudo numa pasta só do
-spotgo. Se preferir instalar no sistema:
+O jeito mais fácil é rodar:
 
-- Linux: `sudo apt install ffmpeg` (ou o gerenciador de pacotes da sua distro). O yt-dlp do apt costuma
-  estar **desatualizado** e quebra com o YouTube; prefira o [release oficial](https://github.com/yt-dlp/yt-dlp/releases).
-- macOS: `brew install yt-dlp ffmpeg deno`
+```sh
+spotgo setup            # baixa o que faltar e confere o SHA-256 de cada um
+spotgo setup --update   # baixa de novo as versões mais recentes
+```
+
+Os binários oficiais vão para uma pasta só do spotgo (`~/.cache/spotgo/bin` no Linux) e têm prioridade
+sobre os do sistema. O que já está instalado é aproveitado, exceto um yt-dlp com mais de 60 dias, que
+costuma quebrar com o YouTube (é o caso do yt-dlp do apt). Se preferir instalar no sistema:
+
+- Linux: `sudo apt install ffmpeg` (ou o gerenciador de pacotes da sua distro). Para o yt-dlp, prefira
+  o [release oficial](https://github.com/yt-dlp/yt-dlp/releases) ou o `spotgo setup`.
+- macOS: `brew install yt-dlp ffmpeg deno`. Não há build oficial do ffmpeg para Mac com checksum
+  publicado, então o `spotgo setup` pede o `brew install ffmpeg`.
 - Windows: `winget install yt-dlp.yt-dlp Gyan.FFmpeg DenoLand.Deno`
 
 ## Uso
@@ -114,7 +123,7 @@ spotgo url https://open.spotify.com/album/0ETFjACtuP2ADo6LFhL6HN
 | `sync` | Sincroniza uma pasta com uma playlist: baixa as faixas novas e apaga as removidas. | 🚧 em breve |
 | `meta` | Atualiza os metadados de arquivos de música que você já tem. | 🚧 em breve |
 | `login` | Login na sua conta (Premium) para ler playlists suas com mais de 100 faixas. | 🚧 em breve |
-| `setup` | Baixa e confere o yt-dlp, o ffmpeg e o deno. | 🚧 em breve |
+| `setup` | Baixa e confere o yt-dlp, o ffmpeg e o deno. `--update` atualiza. | ✅ pronto |
 
 </details>
 
