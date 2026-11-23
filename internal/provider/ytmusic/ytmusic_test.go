@@ -180,3 +180,37 @@ func TestFindCanceled(t *testing.T) {
 		t.Fatalf("err = %v, quero context.Canceled", err)
 	}
 }
+
+// Resposta real em que o card do topo é um vídeo aleatório e a faixa certa
+// vem como item comum, sem duração.
+func TestFindISRCWithoutDuration(t *testing.T) {
+	c, fake := serve(t, map[string]string{"": "isrc_nocard", "songs": "multi_songs", "videos": "multi_videos"})
+	s := song.Song{Title: "Something - Remastered 2009", Artists: []string{"The Beatles"},
+		Album: "Abbey Road (Remastered 2009)", Duration: 182 * time.Second, ISRC: "GBAYE0601691"}
+	got, err := c.Find(context.Background(), s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Result.ID != "VWO3nEuWo4k" || len(fake.bodies) != 1 {
+		t.Fatalf("Find = %+v com %d requisições; quero VWO3nEuWo4k com 1", got.Result, len(fake.bodies))
+	}
+}
+
+func TestSearchRetriesUnknownFormat(t *testing.T) {
+	n := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n++
+		if n == 1 {
+			w.Write([]byte(`{}`))
+			return
+		}
+		w.Write(fixture(t, "songs"))
+	}))
+	t.Cleanup(srv.Close)
+	c := New(fetch.New(fetch.Options{Sleep: func(context.Context, time.Duration) error { return nil }}))
+	c.base = srv.URL
+	rs, err := c.Search(context.Background(), "x", kindSongs)
+	if err != nil || len(rs) == 0 || n != 2 {
+		t.Fatalf("Search = %d resultados, %v, %d requisições", len(rs), err, n)
+	}
+}

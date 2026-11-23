@@ -16,8 +16,8 @@
 ______________________________________________________________________
 
 > [!WARNING]
-> **Em desenvolvimento.** Por enquanto o spotGO já lê os metadados (`spotgo save`), mas ainda
-> não baixa o áudio. Acompanhe o [design](docs/superpowers/specs/2026-11-21-spotgo-design.md)
+> **Em desenvolvimento.** Por enquanto o spotGO já lê os metadados (`spotgo save`) e encontra o
+> áudio de cada faixa no YouTube Music (`spotgo url`), mas ainda não baixa o áudio. Acompanhe o [design](docs/superpowers/specs/2026-11-21-spotgo-design.md)
 > e a lista de [operações](#operações) abaixo.
 
 ______________________________________________________________________
@@ -95,6 +95,9 @@ spotgo save https://open.spotify.com/album/0ETFjACtuP2ADo6LFhL6HN
 
 # metadados de uma playlist, em JSON
 spotgo save --json https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M | jq '.[0].songs[].isrc'
+
+# link do YouTube Music de cada faixa de um álbum
+spotgo url https://open.spotify.com/album/0ETFjACtuP2ADo6LFhL6HN
 ```
 
 ### Operações
@@ -107,7 +110,7 @@ spotgo save --json https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M | jq
 | `save` | Mostra os metadados (título, artistas, álbum, duração, ISRC) sem baixar nada. `--json` para usar com `jq`. | ✅ pronto |
 | `auth` | Configura as credenciais próprias da API do Spotify (modo avançado). | ✅ pronto |
 | `download` | Baixa as faixas do YouTube Music com capa e metadados. | 🚧 em breve |
-| `url` | Mostra a URL do áudio encontrado no YouTube Music para cada faixa. | 🚧 em breve |
+| `url` | Mostra o link do áudio encontrado no YouTube Music para cada faixa. `--json` para usar com `jq`. | ✅ pronto |
 | `sync` | Sincroniza uma pasta com uma playlist: baixa as faixas novas e apaga as removidas. | 🚧 em breve |
 | `meta` | Atualiza os metadados de arquivos de música que você já tem. | 🚧 em breve |
 | `login` | Login na sua conta (Premium) para ler playlists suas com mais de 100 faixas. | 🚧 em breve |

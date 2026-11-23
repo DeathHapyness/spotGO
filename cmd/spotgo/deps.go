@@ -17,6 +17,7 @@ import (
 	"github.com/DeathHapyness/spotGO/internal/deezer"
 	"github.com/DeathHapyness/spotGO/internal/embed"
 	"github.com/DeathHapyness/spotGO/internal/fetch"
+	"github.com/DeathHapyness/spotGO/internal/provider/ytmusic"
 	"github.com/DeathHapyness/spotGO/internal/song"
 	"github.com/DeathHapyness/spotGO/internal/source"
 	"github.com/DeathHapyness/spotGO/internal/spotify"
@@ -32,11 +33,19 @@ type resolver interface {
 // newPublicResolver monta o modo público com um único fetch.Client, para o
 // cache e os limites por host valerem para o embed e o Deezer juntos.
 func newPublicResolver(progress func(done, total int)) *source.Public {
-	cacheDir, _ := fetch.DefaultCacheDir()
-	f := fetch.New(fetch.Options{UserAgent: browserUserAgent, CacheDir: cacheDir})
+	f := newFetch()
 	p := source.NewPublic(embed.New(f), deezer.New(f))
 	p.Progress = progress
 	return p
+}
+
+func newYTMusic() *ytmusic.Client {
+	return ytmusic.New(newFetch())
+}
+
+func newFetch() *fetch.Client {
+	cacheDir, _ := fetch.DefaultCacheDir()
+	return fetch.New(fetch.Options{UserAgent: browserUserAgent, CacheDir: cacheDir})
 }
 
 const envConfigPath = "SPOTGO_CONFIG"

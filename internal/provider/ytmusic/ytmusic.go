@@ -29,6 +29,8 @@ const (
 
 	// Com nota acima disso, o spotDL para de procurar.
 	goodScore = 80
+
+	formatRetry = time.Second
 )
 
 type Client struct {
@@ -79,9 +81,12 @@ func (c *Client) Search(ctx context.Context, query string, k kind) ([]matching.R
 			"Origin":       {"https://music.youtube.com"},
 		},
 		CacheTTL: ttlSearch,
+		// O YouTube Music varia o formato de vez em quando; uma nova tentativa costuma resolver.
 		Check: func(body []byte) error {
-			_, err := parseSearch(body, k)
-			return err
+			if _, err := parseSearch(body, k); err != nil {
+				return &fetch.RetryAfterError{After: formatRetry, Err: err}
+			}
+			return nil
 		},
 	})
 	if err != nil {
@@ -107,6 +112,13 @@ func (c *Client) Find(ctx context.Context, s song.Song) (matching.Scored, error)
 		rs, err := c.Search(ctx, s.ISRC, kindAll)
 		if err != nil {
 			return matching.Scored{}, err
+		}
+		// Na busca por ISRC, a faixa certa às vezes vem sem duração e o matching a
+		// descartaria; o ISRC já identifica a gravação, então usamos a do Spotify.
+		for i := range rs {
+			if rs[i].Verified && rs[i].Duration == 0 {
+				rs[i].Duration = s.Duration
+			}
 		}
 		if len(rs) == 1 && rs[0].Verified {
 			return matching.Scored{Result: rs[0], Score: 100}, nil
