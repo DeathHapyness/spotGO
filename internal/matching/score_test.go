@@ -189,3 +189,15 @@ func TestBestISRC(t *testing.T) {
 		t.Fatalf("Best = %s, quero isrc", got.Result.ID)
 	}
 }
+
+// O spotDL buscava as views que faltavam; aqui 0 = desconhecido. Com alguma
+// desconhecida, não dá para comparar: fica o de maior nota.
+func TestBestViewsPartiallyUnknown(t *testing.T) {
+	sc := []Scored{
+		{Result{ID: "a"}, 90},
+		{Result{ID: "b", Views: 1000}, 88},
+	}
+	if got, _ := Best(sc); got.Result.ID != "a" || got.Score != 90 {
+		t.Fatalf("Best = %s %v, quero a com 90 (views de a desconhecidas)", got.Result.ID, got.Score)
+	}
+}

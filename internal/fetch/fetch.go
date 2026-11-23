@@ -2,6 +2,7 @@
 package fetch
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -13,6 +14,9 @@ import (
 )
 
 type Request struct {
+	Method string // "" = GET
+	// Body é reenviado a cada tentativa e entra na chave do cache.
+	Body     []byte
 	URL      string
 	Header   http.Header
 	CacheTTL time.Duration
@@ -97,7 +101,7 @@ func (c *Client) Get(ctx context.Context, r Request) ([]byte, error) {
 		body, wait, err := c.do(ctx, r)
 		if err == nil {
 			if c.cacheEnabled(r) {
-				c.cachePut(r.URL, body)
+				c.cachePut(r, body)
 			}
 			return body, nil
 		}
@@ -116,7 +120,15 @@ func (c *Client) Get(ctx context.Context, r Request) ([]byte, error) {
 // do faz uma tentativa. wait < 0 significa "não repetir"; wait == 0 significa
 // "repetir com backoff"; wait > 0 é o tempo pedido pelo servidor.
 func (c *Client) do(ctx context.Context, r Request) ([]byte, time.Duration, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, r.URL, nil)
+	method := r.Method
+	if method == "" {
+		method = http.MethodGet
+	}
+	var reqBody io.Reader
+	if r.Body != nil {
+		reqBody = bytes.NewReader(r.Body)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, r.URL, reqBody)
 	if err != nil {
 		return nil, -1, err
 	}

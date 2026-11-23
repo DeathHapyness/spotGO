@@ -111,11 +111,16 @@ func Best(scored []Scored) (Scored, bool) {
 		return top[0], true
 	}
 
+	// O spotDL buscava as views que faltavam; aqui Views == 0 é desconhecido, e
+	// pesar só parte dos resultados daria um bônus de graça aos outros.
 	hi, lo := top[0].Result.Views, top[0].Result.Views
-	for _, sc := range top[1:] {
+	for _, sc := range top {
+		if sc.Result.Views <= 0 {
+			return top[0], true
+		}
 		hi, lo = max(hi, sc.Result.Views), min(lo, sc.Result.Views)
 	}
-	if hi == 0 || hi == lo {
+	if hi == lo {
 		return top[0], true
 	}
 	best := Scored{Score: math.Inf(-1)}

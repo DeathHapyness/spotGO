@@ -8,15 +8,27 @@ import (
 
 func near(a, b float64) bool { return math.Abs(a-b) < 0.01 }
 
+// Valores do slugify do spotDL (python-slugify + unidecode, com ! @ $ permitidos).
+// Única diferença deliberada: apóstrofos somem ("dont"); no Python, ' vira "-" ("don-t").
 func TestSlug(t *testing.T) {
 	cases := map[string]string{
-		"LUCO & Alice Gray":         "luco-and-alice-gray",
+		"LUCO & Alice Gray":         "luco-alice-gray",
+		"Rock & Roll":               "rock-roll",
 		"Don't Stop":                "dont-stop",
 		"Don’t Stop":                "dont-stop",
-		"A$AP Rocky":                "a-ap-rocky",
+		"A$AP Rocky":                "a$ap-rocky",
+		"P!nk":                      "p!nk",
+		"1,000 Years":               "1000-years",
+		"a, b":                      "a-b",
 		"🔥":                         "",
 		"Wasted (feat. Alice Gray)": "wasted-feat-alice-gray",
 		"Beyoncé":                   "beyonce",
+		"LUCØ":                      "luco",
+		"Łona":                      "lona",
+		"Straße":                    "strasse",
+		"Ænima":                     "aenima",
+		"Кино":                      "kino",
+		"  --Señorita--  ":          "senorita",
 	}
 	for in, want := range cases {
 		if got := slug(in); got != want {

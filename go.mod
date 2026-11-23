@@ -3,6 +3,7 @@ module github.com/DeathHapyness/spotGO
 go 1.22
 
 require (
+	github.com/mozillazg/go-unidecode v0.2.0
 	github.com/spf13/cobra v1.8.1
 	golang.org/x/term v0.25.0
 	golang.org/x/text v0.19.0

@@ -5,16 +5,39 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/DeathHapyness/spotGO/internal/textnorm"
+	"github.com/mozillazg/go-unidecode"
 )
 
 var apostrophes = strings.NewReplacer("'", "", "’", "")
 
-// slug imita o python-slugify: apóstrofos somem, o resto que não é letra ou
-// dígito vira "-". Diferença: "&" vira "and" (o slugify usa "-").
+// slug é o slugify do spotDL (python-slugify + unidecode, com ! @ $ permitidos):
+// translitera para ASCII ("LUCØ" → "luco", "Кино" → "kino"), tira a vírgula
+// entre dígitos ("1,000" → "1000") e troca o resto por "-".
+// Diferença deliberada: apóstrofos somem ("Don't" e "Don’t" → "dont"); no
+// Python, ' vira "-" ("don-t") e ’ some, e as duas grafias não batiam.
 func slug(s string) string {
-	return strings.ReplaceAll(textnorm.Fold(apostrophes.Replace(s)), " ", "-")
+	s = strings.ToLower(unidecode.Unidecode(apostrophes.Replace(s)))
+	var b strings.Builder
+	dash := false
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case c == ',' && i > 0 && isDigit(s[i-1]) && i+1 < len(s) && isDigit(s[i+1]):
+		case c == '\'':
+		case isDigit(c) || 'a' <= c && c <= 'z' || c == '!' || c == '@' || c == '$':
+			if dash && b.Len() > 0 {
+				b.WriteByte('-')
+			}
+			dash = false
+			b.WriteByte(c)
+		default:
+			dash = true
+		}
+	}
+	return b.String()
 }
+
+func isDigit(c byte) bool { return '0' <= c && c <= '9' }
 
 func noDash(s string) string { return strings.ReplaceAll(s, "-", "") }
 

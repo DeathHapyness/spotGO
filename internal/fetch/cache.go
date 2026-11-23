@@ -20,10 +20,15 @@ func DefaultCacheDir() (string, error) {
 	return filepath.Join(dir, "spotgo", "http"), nil
 }
 
-func (c *Client) cachePath(url string) string {
-	sum := sha256.Sum256([]byte(url))
-	key := hex.EncodeToString(sum[:])
-	return filepath.Join(c.cacheDir, key[:2], key)
+// cachePath sem corpo continua sendo sha256(URL), para o cache antigo valer.
+func (c *Client) cachePath(r Request) string {
+	key := r.URL
+	if r.Body != nil {
+		key += "\x00" + r.Method + "\x00" + string(r.Body)
+	}
+	sum := sha256.Sum256([]byte(key))
+	h := hex.EncodeToString(sum[:])
+	return filepath.Join(c.cacheDir, h[:2], h)
 }
 
 func (c *Client) cacheEnabled(r Request) bool {
@@ -31,7 +36,7 @@ func (c *Client) cacheEnabled(r Request) bool {
 }
 
 func (c *Client) cacheGet(r Request) ([]byte, bool) {
-	data, err := os.ReadFile(c.cachePath(r.URL))
+	data, err := os.ReadFile(c.cachePath(r))
 	if err != nil || len(data) < cacheHeaderLen {
 		return nil, false
 	}
@@ -45,8 +50,8 @@ func (c *Client) cacheGet(r Request) ([]byte, bool) {
 
 // cachePut é melhor esforço: uma falha ao gravar o cache não pode derrubar
 // uma requisição que já deu certo.
-func (c *Client) cachePut(url string, body []byte) {
-	path := c.cachePath(url)
+func (c *Client) cachePut(r Request, body []byte) {
+	path := c.cachePath(r)
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return

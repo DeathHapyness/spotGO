@@ -77,7 +77,7 @@ func TestCacheSkipsErrors(t *testing.T) {
 func TestCacheCorruptFileIsMiss(t *testing.T) {
 	srv, n := sequence(t, status(200))
 	c, _ := newTestClient(Options{CacheDir: t.TempDir()})
-	path := c.cachePath(srv.URL)
+	path := c.cachePath(Request{URL: srv.URL})
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +122,7 @@ func TestCacheFilePermissions(t *testing.T) {
 	if _, err := c.Get(context.Background(), Request{URL: srv.URL, CacheTTL: time.Hour}); err != nil {
 		t.Fatal(err)
 	}
-	path := c.cachePath(srv.URL)
+	path := c.cachePath(Request{URL: srv.URL})
 	for p, want := range map[string]os.FileMode{path: 0o600, filepath.Dir(path): 0o700} {
 		info, err := os.Stat(p)
 		if err != nil {
