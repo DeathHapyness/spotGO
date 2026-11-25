@@ -116,6 +116,29 @@ func newChain(f *fetch.Client, names []string, ytdlp string) provider.Chain {
 	return c
 }
 
+func newMetaEnv(progress func(done, total int)) metaEnv {
+	f := newFetch()
+	dz := deezer.New(f)
+	return metaEnv{
+		resolver: source.NewPublic(embed.New(f), dz),
+		enrich:   dz.EnrichTrack,
+		covers:   coverFetcher{f},
+		lyrics:   lyrics.New(f),
+		tagger: func(path string) (tagger, error) {
+			dir, _ := deps.ManagedDir()
+			loc := &deps.Locator{Dir: dir, Flags: map[deps.Tool]string{deps.FFmpeg: path}}
+			found, err := loc.Locate(context.Background(), deps.FFmpeg)
+			if errors.Is(err, deps.ErrMissing) {
+				return nil, errors.New("o ffmpeg não foi encontrado; rode spotgo setup")
+			}
+			if err != nil {
+				return nil, err
+			}
+			return &ffmpeg.Converter{Path: found.Path}, nil
+		},
+	}
+}
+
 type coverFetcher struct{ f *fetch.Client }
 
 func (c coverFetcher) Cover(ctx context.Context, url string) ([]byte, error) {

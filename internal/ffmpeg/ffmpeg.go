@@ -13,8 +13,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/DeathHapyness/spotGO/internal/song"
 )
@@ -72,6 +75,12 @@ type Job struct {
 	Song    song.Song
 	Cover   []byte
 	Lyrics  string
+	// Copy copia o áudio sem reencodar, seja qual for o formato (spotgo meta).
+	Copy bool
+	// KeepCover mantém a capa que já está na entrada quando Cover é nil.
+	KeepCover bool
+	// Extra são tags da entrada que devem continuar (as que o spotgo não gerencia).
+	Extra map[string]string
 }
 
 type Converter struct {
@@ -90,6 +99,14 @@ func (c *Converter) Convert(ctx context.Context, job Job) error {
 	dir := filepath.Dir(job.Output)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
+	}
+
+	if job.KeepCover && len(job.Cover) == 0 && !attachedPic(job.Format) {
+		// No ogg/opus a capa é uma tag, que o ffmpeg lê como stream de imagem:
+		// extrai a imagem para gravá-la de novo na tag.
+		if img, err := c.extractCover(ctx, job.Input); err == nil {
+			job.Cover = img
+		}
 	}
 
 	meta, err := os.CreateTemp("", "spotgo-meta-*.txt")
@@ -160,12 +177,15 @@ func args(job Job, sp spec, metaPath, cover, out string) []string {
 		args = append(args, "-i", cover)
 	}
 	args = append(args, "-map", "0:a:0")
-	if cover != "" {
+	switch {
+	case cover != "":
 		args = append(args, "-map", "2:0", "-c:v", "copy", "-disposition:v", "attached_pic")
+	case job.KeepCover && attachedPic(job.Format):
+		args = append(args, "-map", "0:v?", "-c:v", "copy")
 	}
 	args = append(args, "-map_metadata", "1", "-map_metadata:s:a", "-1", "-map_chapters", "-1")
 
-	if job.Bitrate == "" && sp.same != "" && strings.EqualFold(job.InputCodec, sp.same) {
+	if job.Copy || (job.Bitrate == "" && sp.same != "" && strings.EqualFold(job.InputCodec, sp.same)) {
 		args = append(args, "-c:a", "copy")
 	} else {
 		args = append(args, "-c:a", sp.codec)
@@ -223,7 +243,28 @@ func Metadata(job Job) []byte {
 	if len(job.Cover) > 0 && (job.Format == Opus || job.Format == OGG) {
 		put("METADATA_BLOCK_PICTURE", pictureBlock(job.Cover))
 	}
+	keys := make([]string, 0, len(job.Extra))
+	for k := range job.Extra {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		if managed[strings.ToLower(k)] {
+			continue
+		}
+		if strings.EqualFold(k, "METADATA_BLOCK_PICTURE") && len(job.Cover) > 0 {
+			continue
+		}
+		put(k, job.Extra[k])
+	}
 	return b.Bytes()
+}
+
+// managed são as tags que o spotgo escreve; as da entrada com esses nomes saem.
+var managed = map[string]bool{
+	"title": true, "artist": true, "album": true, "album_artist": true, "track": true,
+	"disc": true, "date": true, "isrc": true, "comment": true, "lyrics": true,
+	"encoder": true, "duration": true,
 }
 
 func escape(s string) string {
@@ -288,4 +329,125 @@ func tail(stderr []byte) string {
 		lines = lines[len(lines)-3:]
 	}
 	return ":\n  " + strings.Join(lines, "\n  ")
+}
+
+type Info struct {
+	// Tags com as chaves em minúsculas.
+	Tags     map[string]string
+	Duration time.Duration
+	Codec    string
+	HasCover bool
+}
+
+var (
+	durationRe = regexp.MustCompile(`Duration: (\d+):(\d+):(\d+(?:\.\d+)?)`)
+	audioRe    = regexp.MustCompile(`Stream #\S+: Audio: (\w+)`)
+)
+
+// Probe lê as tags, a duração e o codec só com o ffmpeg (o ffprobe nem
+// sempre está instalado). No ogg e no opus as tags ficam no stream de áudio.
+func (c *Converter) Probe(ctx context.Context, path string, f Format) (Info, error) {
+	args := []string{"-hide_banner", "-nostdin", "-i", path}
+	if f == Opus || f == OGG {
+		args = append(args, "-map_metadata", "0:s:a:0")
+	}
+	args = append(args, "-f", "ffmetadata", "-")
+	bin := c.Path
+	if bin == "" {
+		bin = "ffmpeg"
+	}
+	var stdout, stderr bytes.Buffer
+	cmd := exec.CommandContext(ctx, bin, args...)
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	if err := cmd.Run(); err != nil {
+		if ctx.Err() != nil {
+			return Info{}, ctx.Err()
+		}
+		return Info{}, fmt.Errorf("ffmpeg não conseguiu ler %s%s", filepath.Base(path), tail(stderr.Bytes()))
+	}
+	return parseProbe(stdout.String(), stderr.String()), nil
+}
+
+func parseProbe(meta, info string) Info {
+	out := Info{Tags: ParseMetadata(meta), HasCover: strings.Contains(info, "(attached pic)")}
+	if m := durationRe.FindStringSubmatch(info); m != nil {
+		h, _ := strconv.Atoi(m[1])
+		mi, _ := strconv.Atoi(m[2])
+		sec, _ := strconv.ParseFloat(m[3], 64)
+		out.Duration = time.Duration((float64(h*3600+mi*60) + sec) * float64(time.Second))
+	}
+	if m := audioRe.FindStringSubmatch(info); m != nil {
+		out.Codec = m[1]
+	}
+	return out
+}
+
+// ParseMetadata lê o formato FFMETADATA1 (só a seção global).
+func ParseMetadata(s string) map[string]string {
+	tags := map[string]string{}
+	var line strings.Builder
+	flush := func() {
+		l := line.String()
+		line.Reset()
+		if l == "" || strings.HasPrefix(l, ";") || strings.HasPrefix(l, "#") {
+			return
+		}
+		k, v, ok := cutUnescaped(l)
+		if ok {
+			tags[strings.ToLower(k)] = v
+		}
+	}
+	for i := 0; i < len(s); i++ {
+		switch ch := s[i]; {
+		case ch == '\\' && i+1 < len(s):
+			line.WriteByte('\\')
+			line.WriteByte(s[i+1])
+			i++
+		case ch == '\n':
+			flush()
+			if strings.HasPrefix(s[i+1:], "[") {
+				return tags
+			}
+		default:
+			line.WriteByte(ch)
+		}
+	}
+	flush()
+	return tags
+}
+
+// cutUnescaped separa "chave=valor" no primeiro = sem barra e tira os escapes.
+func cutUnescaped(l string) (string, string, bool) {
+	var k, v strings.Builder
+	cur, found := &k, false
+	for i := 0; i < len(l); i++ {
+		switch {
+		case l[i] == '\\' && i+1 < len(l):
+			i++
+			cur.WriteByte(l[i])
+		case l[i] == '=' && !found:
+			found, cur = true, &v
+		default:
+			cur.WriteByte(l[i])
+		}
+	}
+	return k.String(), v.String(), found
+}
+
+func (c *Converter) extractCover(ctx context.Context, path string) ([]byte, error) {
+	bin := c.Path
+	if bin == "" {
+		bin = "ffmpeg"
+	}
+	var stdout bytes.Buffer
+	cmd := exec.CommandContext(ctx, bin, "-hide_banner", "-nostdin", "-loglevel", "error",
+		"-i", path, "-map", "0:v:0", "-c:v", "copy", "-f", "image2pipe", "-")
+	cmd.Stdout = &stdout
+	if err := cmd.Run(); err != nil {
+		return nil, err
+	}
+	if stdout.Len() == 0 {
+		return nil, errors.New("sem capa")
+	}
+	return stdout.Bytes(), nil
 }

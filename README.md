@@ -17,7 +17,7 @@ ______________________________________________________________________
 
 > [!WARNING]
 > **Em desenvolvimento.** O `spotgo download` e o `spotgo sync` já baixam faixas, álbuns, playlists e
-> artistas com capa e metadados; `meta` e `login` ainda não existem. Acompanhe o [design](docs/superpowers/specs/2026-11-21-spotgo-design.md)
+> artistas com capa e metadados, e o `spotgo meta` arruma as tags de músicas que você já tem; o `login` ainda não existe. Acompanhe o [design](docs/superpowers/specs/2026-11-21-spotgo-design.md)
 > e a lista de [operações](#operações) abaixo.
 
 ______________________________________________________________________
@@ -121,6 +121,10 @@ spotgo download --lyrics tag,lrc --m3u https://open.spotify.com/album/0ETFjACtuP
 # se o YouTube Music e o YouTube não acharem, tenta o SoundCloud e o Bandcamp
 spotgo download --audio youtube-music,youtube,soundcloud,bandcamp <link>
 
+# arruma as tags de uma pasta de músicas (veja antes com --dry-run)
+spotgo meta --dry-run ~/Música
+spotgo meta ~/Música
+
 # metadados de um álbum, em texto
 spotgo save https://open.spotify.com/album/0ETFjACtuP2ADo6LFhL6HN
 
@@ -143,7 +147,7 @@ spotgo url https://open.spotify.com/album/0ETFjACtuP2ADo6LFhL6HN
 | `download` | Baixa as faixas do YouTube Music com capa, letra ([LRCLIB](https://lrclib.net), sincronizada quando existe) e metadados (mp3, m4a, opus, ogg, flac, wav). `--m3u` grava a playlist. Pula as que já existem; `--archive` guarda as já baixadas. | ✅ pronto |
 | `url` | Mostra o link do áudio encontrado para cada faixa (YouTube Music, YouTube, SoundCloud ou Bandcamp, pelo `--audio`). `--json` para usar com `jq`. | ✅ pronto |
 | `sync` | Sincroniza uma pasta com uma playlist: baixa as faixas novas, renomeia as que mudaram de posição e apaga as removidas (só arquivos que ele mesmo baixou). | ✅ pronto |
-| `meta` | Atualiza os metadados de arquivos de música que você já tem. | 🚧 em breve |
+| `meta` | Atualiza as tags, a capa e a letra de músicas que você já tem, sem reencodar o áudio. Acha a faixa pelo link do Spotify no comentário, pelas tags ou pelo nome do arquivo. `--dry-run` só mostra. | ✅ pronto |
 | `login` | Login na sua conta (Premium) para ler playlists suas com mais de 100 faixas. | 🚧 em breve |
 | `setup` | Baixa e confere o yt-dlp, o ffmpeg e o deno. `--update` atualiza. | ✅ pronto |
 

@@ -273,3 +273,72 @@ func TestConvertRealBadInput(t *testing.T) {
 		t.Errorf("sobrou arquivo: %v", ents)
 	}
 }
+
+func TestParseMetadataRoundTrip(t *testing.T) {
+	job := Job{Song: sample, Format: MP3, Lyrics: "[00:01.00]um\ndois=três;#"}
+	tags := ParseMetadata(string(Metadata(job)) + "[STREAM]\ntitle=do stream\n")
+	if tags["title"] != sample.Title || tags["lyrics"] != job.Lyrics || tags["isrc"] != sample.ISRC || tags["track"] != "3/10" {
+		t.Errorf("tags: %#v", tags)
+	}
+}
+
+func TestParseProbe(t *testing.T) {
+	info := `Input #0, ogg, from 'x.opus':
+  Duration: 00:04:19.97, start: 0.007500, bitrate: 142 kb/s
+  Stream #0:0: Audio: opus, 48000 Hz, stereo, fltp
+  Stream #0:1: Video: mjpeg (Baseline), 1000x1000, 90k tbn (attached pic)`
+	got := parseProbe(";FFMETADATA1\nTITLE=x\n", info)
+	if got.Tags["title"] != "x" || got.Codec != "opus" || !got.HasCover || got.Duration != 259970*time.Millisecond {
+		t.Errorf("parseProbe = %+v", got)
+	}
+}
+
+func TestExtraTags(t *testing.T) {
+	m := string(Metadata(Job{Song: song.Song{Title: "novo"}, Format: MP3, Extra: map[string]string{
+		"genre": "Rock", "TITLE": "velho", "encoder": "x", "lyrics": "letra antiga",
+	}}))
+	if !strings.Contains(m, "genre=Rock\n") || strings.Contains(m, "velho") || strings.Contains(m, "encoder") {
+		t.Errorf("Extra:\n%s", m)
+	}
+}
+
+func TestRetagReal(t *testing.T) {
+	needFFmpeg(t)
+	dir := t.TempDir()
+	audio, cover := gen(t, dir)
+	for _, f := range []Format{MP3, Opus, FLAC} {
+		t.Run(string(f), func(t *testing.T) {
+			c := &Converter{}
+			path := filepath.Join(dir, "x."+string(f))
+			first := Job{Input: audio, InputCodec: "opus", Output: path, Format: f, Song: song.Song{Title: "velho"}, Cover: cover,
+				Extra: map[string]string{"genre": "Rock"}}
+			if err := c.Convert(context.Background(), first); err != nil {
+				t.Fatal(err)
+			}
+			info, err := c.Probe(context.Background(), path, f)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if info.Tags["title"] != "velho" || info.Tags["genre"] != "Rock" || info.Duration < 900*time.Millisecond {
+				t.Fatalf("Probe: %+v", info)
+			}
+			if !info.HasCover {
+				t.Errorf("Probe não viu a capa: %+v", info)
+			}
+
+			// Retag: copia o áudio, troca o título, mantém o gênero e a capa.
+			re := Job{Input: path, Output: path, Format: f, Copy: true, KeepCover: info.HasCover,
+				Song: song.Song{Title: "novo", Artists: []string{"A"}}, Extra: info.Tags}
+			if err := c.Convert(context.Background(), re); err != nil {
+				t.Fatal(err)
+			}
+			after, _ := c.Probe(context.Background(), path, f)
+			if after.Tags["title"] != "novo" || after.Tags["genre"] != "Rock" || after.Codec != info.Codec {
+				t.Errorf("depois: %+v", after)
+			}
+			if !after.HasCover {
+				t.Error("a capa sumiu")
+			}
+		})
+	}
+}
