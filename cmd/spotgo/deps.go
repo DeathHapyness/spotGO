@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -20,6 +21,10 @@ import (
 	"github.com/DeathHapyness/spotGO/internal/embed"
 	"github.com/DeathHapyness/spotGO/internal/fetch"
 	"github.com/DeathHapyness/spotGO/internal/ffmpeg"
+	"github.com/DeathHapyness/spotGO/internal/provider"
+	"github.com/DeathHapyness/spotGO/internal/provider/bandcamp"
+	"github.com/DeathHapyness/spotGO/internal/provider/soundcloud"
+	"github.com/DeathHapyness/spotGO/internal/provider/youtube"
 	"github.com/DeathHapyness/spotGO/internal/provider/ytmusic"
 	"github.com/DeathHapyness/spotGO/internal/song"
 	"github.com/DeathHapyness/spotGO/internal/source"
@@ -42,8 +47,18 @@ func newPublicResolver(progress func(done, total int)) *source.Public {
 	return p
 }
 
-func newYTMusic() *ytmusic.Client {
-	return ytmusic.New(newFetch())
+// newURLFinder só procura o yt-dlp (sem instalar nada) se o SoundCloud foi pedido.
+func newURLFinder(audio []string) (finder, error) {
+	ytdlp := ""
+	if slices.Contains(audio, "soundcloud") {
+		dir, _ := deps.ManagedDir()
+		f, err := (&deps.Locator{Dir: dir}).Locate(context.Background(), deps.YTDLP)
+		if err != nil {
+			return nil, fmt.Errorf("o SoundCloud precisa do yt-dlp: %w; rode spotgo setup", err)
+		}
+		ytdlp = f.Path
+	}
+	return newChain(newFetch(), audio, ytdlp), nil
 }
 
 func newSetupDeps(progress func(t deps.Tool, done, total int64)) setupDeps {
@@ -72,10 +87,31 @@ func newDownloadEnv(progress func(done, total int)) downloadEnv {
 	p.Progress = progress
 	return downloadEnv{
 		resolver: p,
-		finder:   ytmusic.New(f),
-		covers:   coverFetcher{f},
-		tools:    downloadTools,
+		newFinder: func(audio []string, ytdlp string) (download.Finder, error) {
+			return newChain(f, audio, ytdlp), nil
+		},
+		covers: coverFetcher{f},
+		tools:  downloadTools,
 	}
+}
+
+func newChain(f *fetch.Client, names []string, ytdlp string) provider.Chain {
+	var c provider.Chain
+	for _, n := range names {
+		var p provider.Provider
+		switch n {
+		case "youtube-music":
+			p = ytmusic.New(f)
+		case "youtube":
+			p = youtube.New(f)
+		case "soundcloud":
+			p = &soundcloud.Client{YTDLP: ytdlp}
+		case "bandcamp":
+			p = bandcamp.New(f)
+		}
+		c = append(c, provider.Named{Name: n, Provider: p})
+	}
+	return c
 }
 
 type coverFetcher struct{ f *fetch.Client }

@@ -63,7 +63,19 @@ func (y *YTDLP) Fetch(ctx context.Context, url string, f ffmpeg.Format, dir stri
 	if file == "" {
 		return "", "", fmt.Errorf("yt-dlp não disse onde salvou %s", url)
 	}
-	return file, codec, nil
+	return file, normalizeCodec(codec), nil
+}
+
+// normalizeCodec traduz o acodec do yt-dlp ("mp4a.40.2") para o nome do ffmpeg ("aac").
+func normalizeCodec(c string) string {
+	c = strings.ToLower(c)
+	switch {
+	case strings.HasPrefix(c, "mp4a"):
+		return "aac"
+	case c == "none" || c == "na":
+		return ""
+	}
+	return c
 }
 
 func runCmd(ctx context.Context, path string, args []string) ([]byte, []byte, error) {

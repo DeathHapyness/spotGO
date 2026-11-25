@@ -108,7 +108,7 @@ func TestDownloadNotFoundAndFailure(t *testing.T) {
 	if !strings.Contains(out, "não achada  B, C - Dois") || !strings.Contains(errOut, "erro        D - Três: Video unavailable") {
 		t.Errorf("out:\n%s\nerr:\n%s", out, errOut)
 	}
-	if !strings.Contains(errOut, "1 baixada, 1 não achada no YouTube Music, 1 com erro") {
+	if !strings.Contains(errOut, "1 baixada, 1 não achada, 1 com erro") {
 		t.Errorf("resumo:\n%s", errOut)
 	}
 }
@@ -180,5 +180,20 @@ func TestEnsureTools(t *testing.T) {
 	}, func([]deps.Tool) error { return nil }, now)
 	if !errors.Is(err, deps.ErrUnsupported) {
 		t.Errorf("err = %v", err)
+	}
+}
+
+func TestParseAudio(t *testing.T) {
+	got, err := parseAudio(" YouTube-Music, soundcloud,,soundcloud ")
+	if err != nil || strings.Join(got, ",") != "youtube-music,soundcloud" {
+		t.Errorf("parseAudio = %v, %v", got, err)
+	}
+	for _, bad := range []string{"spotify", ",", ""} {
+		if _, err := parseAudio(bad); err == nil {
+			t.Errorf("%q: esperava erro", bad)
+		}
+	}
+	if _, _, err := runDownload(t, fakeFetch{}, &fakeConv{}, findAllOK, nil, "--audio", "tidal", albumURL(idBom)); err == nil {
+		t.Error("--audio inválido deve falhar antes de baixar")
 	}
 }

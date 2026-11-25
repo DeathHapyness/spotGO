@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/DeathHapyness/spotGO/internal/matching"
-	"github.com/DeathHapyness/spotGO/internal/provider/ytmusic"
+	"github.com/DeathHapyness/spotGO/internal/provider"
 	"github.com/DeathHapyness/spotGO/internal/song"
 	"github.com/DeathHapyness/spotGO/internal/source"
 )
@@ -38,7 +38,7 @@ func found(s song.Song) (matching.Scored, error) {
 func runURL(t *testing.T, ctx context.Context, f finder, args ...string) (string, string, error) {
 	t.Helper()
 	r := &fakeResolver{results: map[string]source.Result{idBom: threeSongs()}}
-	cmd := newURLCmd(func(func(int, int)) resolver { return r }, func() finder { return f })
+	cmd := newURLCmd(func(func(int, int)) resolver { return r }, func([]string) (finder, error) { return f, nil })
 	cmd.SilenceUsage, cmd.SilenceErrors = true, true
 	var out, errb bytes.Buffer
 	cmd.SetOut(&out)
@@ -69,7 +69,7 @@ func TestURLPrintsInOrder(t *testing.T) {
 func TestURLNotFoundContinues(t *testing.T) {
 	f := fakeFinder{func(_ context.Context, s song.Song) (matching.Scored, error) {
 		if s.Title == "Dois" {
-			return matching.Scored{}, ytmusic.ErrNotFound
+			return matching.Scored{}, provider.ErrNotFound
 		}
 		return found(s)
 	}}
@@ -104,7 +104,7 @@ func TestURLSearchErrorFails(t *testing.T) {
 func TestURLJSON(t *testing.T) {
 	f := fakeFinder{func(_ context.Context, s song.Song) (matching.Scored, error) {
 		if s.Title == "Dois" {
-			return matching.Scored{}, ytmusic.ErrNotFound
+			return matching.Scored{}, provider.ErrNotFound
 		}
 		return found(s)
 	}}

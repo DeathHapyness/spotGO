@@ -14,7 +14,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/DeathHapyness/spotGO/internal/matching"
-	"github.com/DeathHapyness/spotGO/internal/provider/ytmusic"
+	"github.com/DeathHapyness/spotGO/internal/provider"
 	"github.com/DeathHapyness/spotGO/internal/song"
 )
 
@@ -38,13 +38,14 @@ type jsonURL struct {
 	Score   float64  `json:"score"`
 }
 
-func newURLCmd(newResolver func(progress func(done, total int)) resolver, newFinder func() finder) *cobra.Command {
+func newURLCmd(newResolver func(progress func(done, total int)) resolver, newFinder func(audio []string) (finder, error)) *cobra.Command {
 	var asJSON bool
+	var audioFlag string
 	cmd := &cobra.Command{
 		Use:   "url <link>...",
-		Short: "Mostra o link do YouTube Music encontrado para cada faixa",
+		Short: "Mostra o link do áudio encontrado para cada faixa",
 		Long: `Lê os links do Spotify (faixa, álbum, playlist ou artista), procura cada faixa
-no YouTube Music e mostra o link do áudio que o spotgo baixaria. Não baixa nada.`,
+nos provedores do --audio e mostra o link do áudio que o spotgo baixaria. Não baixa nada.`,
 		Example: `  spotgo url https://open.spotify.com/album/0ETFjACtuP2ADo6LFhL6HN
   spotgo url --json https://open.spotify.com/track/2EqlS6tkEnglzr7tkKAAYD | jq`,
 		Args: cobra.MinimumNArgs(1),
@@ -52,7 +53,14 @@ no YouTube Music e mostra o link do áudio que o spotgo baixaria. Não baixa nad
 			ctx, stdout, stderr := cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr()
 			progress := progressPrinter(stderr)
 			r := newResolver(progress)
-			f := newFinder()
+			audio, err := parseAudio(audioFlag)
+			if err != nil {
+				return err
+			}
+			f, err := newFinder(audio)
+			if err != nil {
+				return err
+			}
 
 			var all []match
 			linkErrs, searchErrs := 0, 0
@@ -74,7 +82,7 @@ no YouTube Music e mostra o link do áudio que o spotgo baixaria. Não baixa nad
 					return fmt.Errorf("interrompido: %w", ctx.Err())
 				}
 				for _, m := range matches {
-					if m.err != nil && !errors.Is(m.err, ytmusic.ErrNotFound) {
+					if m.err != nil && !errors.Is(m.err, provider.ErrNotFound) {
 						searchErrs++
 						fmt.Fprintf(stderr, "erro: %s: %v\n", songLabel(m.song), m.err)
 						continue
@@ -110,6 +118,7 @@ no YouTube Music e mostra o link do áudio que o spotgo baixaria. Não baixa nad
 		},
 	}
 	cmd.Flags().BoolVar(&asJSON, "json", false, "saída em JSON (um objeto por faixa)")
+	cmd.Flags().StringVar(&audioFlag, "audio", defaultAudio, "provedores de áudio, em ordem: "+strings.Join(audioProviders, ", "))
 	return cmd
 }
 
@@ -180,7 +189,7 @@ func printMatch(w io.Writer, m match) {
 func writeURLJSON(w io.Writer, ms []match) error {
 	out := make([]jsonURL, 0, len(ms))
 	for _, m := range ms {
-		if m.err != nil && !errors.Is(m.err, ytmusic.ErrNotFound) {
+		if m.err != nil && !errors.Is(m.err, provider.ErrNotFound) {
 			continue
 		}
 		j := jsonURL{Title: m.song.Title, Artists: m.song.Artists}

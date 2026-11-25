@@ -115,6 +115,9 @@ spotgo download -o "{list-name}/{list-position} - {artists} - {title}" \
 spotgo sync --dir ~/Música/Mix -o "{list-position} - {artists} - {title}" \
   https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M
 
+# se o YouTube Music e o YouTube não acharem, tenta o SoundCloud e o Bandcamp
+spotgo download --audio youtube-music,youtube,soundcloud,bandcamp <link>
+
 # metadados de um álbum, em texto
 spotgo save https://open.spotify.com/album/0ETFjACtuP2ADo6LFhL6HN
 
@@ -135,7 +138,7 @@ spotgo url https://open.spotify.com/album/0ETFjACtuP2ADo6LFhL6HN
 | `save` | Mostra os metadados (título, artistas, álbum, duração, ISRC) sem baixar nada. `--json` para usar com `jq`. | ✅ pronto |
 | `auth` | Configura as credenciais próprias da API do Spotify (modo avançado). | ✅ pronto |
 | `download` | Baixa as faixas do YouTube Music com capa e metadados (mp3, m4a, opus, ogg, flac, wav). Pula as que já existem; `--archive` guarda as já baixadas. | ✅ pronto |
-| `url` | Mostra o link do áudio encontrado no YouTube Music para cada faixa. `--json` para usar com `jq`. | ✅ pronto |
+| `url` | Mostra o link do áudio encontrado para cada faixa (YouTube Music, YouTube, SoundCloud ou Bandcamp, pelo `--audio`). `--json` para usar com `jq`. | ✅ pronto |
 | `sync` | Sincroniza uma pasta com uma playlist: baixa as faixas novas, renomeia as que mudaram de posição e apaga as removidas (só arquivos que ele mesmo baixou). | ✅ pronto |
 | `meta` | Atualiza os metadados de arquivos de música que você já tem. | 🚧 em breve |
 | `login` | Login na sua conta (Premium) para ler playlists suas com mais de 100 faixas. | 🚧 em breve |

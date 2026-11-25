@@ -267,6 +267,13 @@ func TestYTDLPFetch(t *testing.T) {
 	}
 
 	y.Run = func(ctx context.Context, path string, args []string) ([]byte, []byte, error) {
+		return []byte("/tmp/d/x.m4a\tmp4a.40.2\n"), nil, nil
+	}
+	if _, codec, _ := y.Fetch(context.Background(), "u", ffmpeg.M4A, "/tmp/d"); codec != "aac" {
+		t.Errorf("mp4a.40.2 deve virar aac: %q", codec)
+	}
+
+	y.Run = func(ctx context.Context, path string, args []string) ([]byte, []byte, error) {
 		return nil, []byte("WARNING: x\nERROR: [youtube] x: Video unavailable\n"), errors.New("saiu com código 1")
 	}
 	if _, _, err := y.Fetch(context.Background(), "u", ffmpeg.Opus, "/tmp/d"); err == nil || !strings.Contains(err.Error(), "Video unavailable") {

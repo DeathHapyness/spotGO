@@ -1,0 +1,423 @@
+{
+ "contents": {
+  "twoColumnSearchResultsRenderer": {
+   "primaryContents": {
+    "sectionListRenderer": {
+     "contents": [
+      {
+       "itemSectionRenderer": {
+        "contents": [
+         {
+          "videoRenderer": {
+           "videoId": "45cYwDMibGo",
+           "title": {
+            "runs": [
+             {
+              "text": "The Beatles - Come Together"
+             }
+            ]
+           },
+           "ownerText": {
+            "runs": [
+             {
+              "text": "The Beatles"
+             }
+            ]
+           },
+           "lengthText": {
+            "accessibility": {
+             "accessibilityData": {
+              "label": "4 minutes, 19 seconds"
+             }
+            },
+            "simpleText": "4:19"
+           },
+           "viewCountText": {
+            "simpleText": "166,174,637 views"
+           },
+           "ownerBadges": [
+            {
+             "metadataBadgeRenderer": {
+              "style": "BADGE_STYLE_TYPE_VERIFIED_ARTIST"
+             }
+            }
+           ]
+          }
+         },
+         {
+          "videoRenderer": {
+           "videoId": "oolpPmuK2I8",
+           "title": {
+            "runs": [
+             {
+              "text": "Come Together (Remastered 2009)"
+             }
+            ]
+           },
+           "ownerText": {
+            "runs": [
+             {
+              "text": "The Beatles"
+             }
+            ]
+           },
+           "lengthText": {
+            "accessibility": {
+             "accessibilityData": {
+              "label": "4 minutes, 20 seconds"
+             }
+            },
+            "simpleText": "4:20"
+           },
+           "viewCountText": {
+            "simpleText": "75,644,777 views"
+           },
+           "ownerBadges": [
+            {
+             "metadataBadgeRenderer": {
+              "style": "BADGE_STYLE_TYPE_VERIFIED_ARTIST"
+             }
+            }
+           ]
+          }
+         },
+         {
+          "videoRenderer": {
+           "videoId": "oVW6wJ7MYDM",
+           "title": {
+            "runs": [
+             {
+              "text": "Come Together (Remastered 2015)"
+             }
+            ]
+           },
+           "ownerText": {
+            "runs": [
+             {
+              "text": "The Beatles"
+             }
+            ]
+           },
+           "lengthText": {
+            "accessibility": {
+             "accessibilityData": {
+              "label": "4 minutes, 19 seconds"
+             }
+            },
+            "simpleText": "4:19"
+           },
+           "viewCountText": {
+            "simpleText": "40,465,673 views"
+           },
+           "ownerBadges": [
+            {
+             "metadataBadgeRenderer": {
+              "style": "BADGE_STYLE_TYPE_VERIFIED_ARTIST"
+             }
+            }
+           ]
+          }
+         },
+         {
+          "videoRenderer": {
+           "videoId": "OEo9Bh679wM",
+           "title": {
+            "runs": [
+             {
+              "text": "Come Together- The Beatles"
+             }
+            ]
+           },
+           "ownerText": {
+            "runs": [
+             {
+              "text": "Brad Dilon"
+             }
+            ]
+           },
+           "lengthText": {
+            "accessibility": {
+             "accessibilityData": {
+              "label": "4 minutes, 23 seconds"
+             }
+            },
+            "simpleText": "4:23"
+           },
+           "viewCountText": {
+            "simpleText": "6,264,733 views"
+           }
+          }
+         },
+         {
+          "videoRenderer": {
+           "videoId": "FQPleNP1zRU",
+           "title": {
+            "runs": [
+             {
+              "text": "The Beatles - Come Together (Lyrics)"
+             }
+            ]
+           },
+           "ownerText": {
+            "runs": [
+             {
+              "text": "Chilly Lyrics 𝄞"
+             }
+            ]
+           },
+           "lengthText": {
+            "accessibility": {
+             "accessibilityData": {
+              "label": "4 minutes, 19 seconds"
+             }
+            },
+            "simpleText": "4:19"
+           },
+           "viewCountText": {
+            "simpleText": "184,832 views"
+           }
+          }
+         },
+         {
+          "videoRenderer": {
+           "videoId": "DEwl_Jlkjys",
+           "title": {
+            "runs": [
+             {
+              "text": "The Beatles - Come Together (Official Music Video) HD"
+             }
+            ]
+           },
+           "ownerText": {
+            "runs": [
+             {
+              "text": "John"
+             }
+            ]
+           },
+           "lengthText": {
+            "accessibility": {
+             "accessibilityData": {
+              "label": "3 minutes, 58 seconds"
+             }
+            },
+            "simpleText": "3:58"
+           },
+           "viewCountText": {
+            "simpleText": "35,651 views"
+           }
+          }
+         },
+         {
+          "videoRenderer": {
+           "videoId": "l3SBBWIxGZA",
+           "title": {
+            "runs": [
+             {
+              "text": "The Beatles - Come Together (2019 Mix / Audio)"
+             }
+            ]
+           },
+           "ownerText": {
+            "runs": [
+             {
+              "text": "The Beatles"
+             }
+            ]
+           },
+           "lengthText": {
+            "accessibility": {
+             "accessibilityData": {
+              "label": "4 minutes, 22 seconds"
+             }
+            },
+            "simpleText": "4:22"
+           },
+           "viewCountText": {
+            "simpleText": "1,756,713 views"
+           },
+           "ownerBadges": [
+            {
+             "metadataBadgeRenderer": {
+              "style": "BADGE_STYLE_TYPE_VERIFIED_ARTIST"
+             }
+            }
+           ]
+          }
+         },
+         {
+          "videoRenderer": {
+           "videoId": "cAmn4eMusZk",
+           "title": {
+            "runs": [
+             {
+              "text": "The Beatles - Come Together"
+             }
+            ]
+           },
+           "ownerText": {
+            "runs": [
+             {
+              "text": "fucktown"
+             }
+            ]
+           },
+           "lengthText": {
+            "accessibility": {
+             "accessibilityData": {
+              "label": "4 minutes, 21 seconds"
+             }
+            },
+            "simpleText": "4:21"
+           },
+           "viewCountText": {
+            "simpleText": "2,288,422 views"
+           }
+          }
+         },
+         {
+          "videoRenderer": {
+           "videoId": "KbmAH3R0z6Y",
+           "title": {
+            "runs": [
+             {
+              "text": "The Beatles \"Come Together\"  (1969) 4K"
+             }
+            ]
+           },
+           "ownerText": {
+            "runs": [
+             {
+              "text": "manuel fernandez"
+             }
+            ]
+           },
+           "lengthText": {
+            "accessibility": {
+             "accessibilityData": {
+              "label": "4 minutes, 14 seconds"
+             }
+            },
+            "simpleText": "4:14"
+           },
+           "viewCountText": {
+            "simpleText": "1,552 views"
+           }
+          }
+         },
+         {
+          "videoRenderer": {
+           "videoId": "BRX9CoClfaQ",
+           "title": {
+            "runs": [
+             {
+              "text": "The Beatles - Come Together (50th Anniversary Mix)"
+             }
+            ]
+           },
+           "ownerText": {
+            "runs": [
+             {
+              "text": "The Beatles Performances"
+             }
+            ]
+           },
+           "lengthText": {
+            "accessibility": {
+             "accessibilityData": {
+              "label": "4 minutes, 19 seconds"
+             }
+            },
+            "simpleText": "4:19"
+           },
+           "viewCountText": {
+            "simpleText": "613,857 views"
+           },
+           "ownerBadges": [
+            {
+             "metadataBadgeRenderer": {
+              "style": "BADGE_STYLE_TYPE_VERIFIED"
+             }
+            }
+           ]
+          }
+         },
+         {
+          "videoRenderer": {
+           "videoId": "QvbwW9bxhZY",
+           "title": {
+            "runs": [
+             {
+              "text": "Come Together (live) - John & Yoko/Plastic Ono Band with Elephant's Memory"
+             }
+            ]
+           },
+           "ownerText": {
+            "runs": [
+             {
+              "text": "johnlennon"
+             }
+            ]
+           },
+           "lengthText": {
+            "accessibility": {
+             "accessibilityData": {
+              "label": "4 minutes, 22 seconds"
+             }
+            },
+            "simpleText": "4:22"
+           },
+           "viewCountText": {
+            "simpleText": "2,089,438 views"
+           },
+           "ownerBadges": [
+            {
+             "metadataBadgeRenderer": {
+              "style": "BADGE_STYLE_TYPE_VERIFIED_ARTIST"
+             }
+            }
+           ]
+          }
+         },
+         {
+          "videoRenderer": {
+           "videoId": "2yCU08QAzYc",
+           "title": {
+            "runs": [
+             {
+              "text": "Coaches \"Come Together\" - The Voice"
+             }
+            ]
+           },
+           "ownerText": {
+            "runs": [
+             {
+              "text": "Freddy Llano"
+             }
+            ]
+           },
+           "lengthText": {
+            "accessibility": {
+             "accessibilityData": {
+              "label": "2 minutes, 27 seconds"
+             }
+            },
+            "simpleText": "2:27"
+           },
+           "viewCountText": {
+            "simpleText": "6,094,504 views"
+           }
+          }
+         }
+        ]
+       }
+      },
+      {
+       "continuationItemRenderer": {}
+      }
+     ]
+    }
+   }
+  }
+ }
+}

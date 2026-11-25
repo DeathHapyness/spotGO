@@ -20,6 +20,7 @@ type State struct {
 	Template string   `json:"template"`
 	Format   string   `json:"format"`
 	Bitrate  string   `json:"bitrate,omitempty"`
+	Audio    string   `json:"audio,omitempty"`
 	// Files liga o ID da faixa ao caminho (relativo à pasta, com /) do arquivo
 	// que o sync criou. Só esses arquivos podem ser apagados.
 	Files map[string]string `json:"files"`

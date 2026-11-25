@@ -56,6 +56,7 @@ nada é apagado nessa rodada.
 			}
 			pick("output", &f.output, &st.Template)
 			pick("format", &f.format, &st.Format)
+			pick("audio", &f.audio, &st.Audio)
 			if fl.Changed("bitrate") {
 				st.Bitrate = f.bitrate
 			}

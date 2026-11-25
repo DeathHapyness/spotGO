@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -18,7 +19,7 @@ import (
 	"github.com/DeathHapyness/spotGO/internal/download"
 	"github.com/DeathHapyness/spotGO/internal/ffmpeg"
 	"github.com/DeathHapyness/spotGO/internal/output"
-	"github.com/DeathHapyness/spotGO/internal/provider/ytmusic"
+	"github.com/DeathHapyness/spotGO/internal/provider"
 	"github.com/DeathHapyness/spotGO/internal/song"
 	"github.com/DeathHapyness/spotGO/internal/source"
 	"github.com/DeathHapyness/spotGO/internal/syncstate"
@@ -32,13 +33,16 @@ type downloadFlags struct {
 	threads   int
 	yes       bool
 	tools     map[deps.Tool]*string
+	audio     string
 }
 
 // downloadEnv é o que o comando precisa do mundo de fora (trocado nos testes).
 type downloadEnv struct {
 	resolver resolver
 	finder   download.Finder
-	covers   download.Covers
+	// newFinder monta a cadeia do --audio; nil usa finder.
+	newFinder func(audio []string, ytdlp string) (download.Finder, error)
+	covers    download.Covers
 	// tools localiza (e, se preciso, instala) os binários e monta o yt-dlp e o ffmpeg.
 	tools func(ctx context.Context, f downloadFlags, confirm func(missing []deps.Tool) error) (download.Fetcher, download.Converter, []string, error)
 }
@@ -120,9 +124,34 @@ func addDownloadFlags(cmd *cobra.Command, f *downloadFlags) {
 	fl.BoolVar(&f.overwrite, "overwrite", false, "baixa de novo faixas que já existem")
 	fl.IntVar(&f.threads, "threads", 4, "buscas e downloads simultâneos")
 	fl.BoolVarP(&f.yes, "yes", "y", false, "baixa o yt-dlp, o ffmpeg ou o deno sem perguntar, se faltarem")
+	fl.StringVar(&f.audio, "audio", defaultAudio, "provedores de áudio, em ordem: "+strings.Join(audioProviders, ", "))
 	for _, t := range deps.Tools {
 		f.tools[t] = fl.String(string(t), "", "caminho do "+string(t))
 	}
+}
+
+const defaultAudio = "youtube-music,youtube"
+
+var audioProviders = []string{"youtube-music", "youtube", "soundcloud", "bandcamp"}
+
+func parseAudio(s string) ([]string, error) {
+	var out []string
+	seen := map[string]bool{}
+	for _, n := range strings.Split(s, ",") {
+		n = strings.ToLower(strings.TrimSpace(n))
+		if n == "" || seen[n] {
+			continue
+		}
+		if !slices.Contains(audioProviders, n) {
+			return nil, fmt.Errorf("--audio: provedor desconhecido %q (use %s)", n, strings.Join(audioProviders, ", "))
+		}
+		seen[n] = true
+		out = append(out, n)
+	}
+	if len(out) == 0 {
+		return nil, errors.New("--audio: nenhum provedor")
+	}
+	return out, nil
 }
 
 // session junta o que o download e o sync fazem igual: validar as opções,
@@ -146,6 +175,10 @@ func newSession(cmd *cobra.Command, newEnv func(func(int, int)) downloadEnv, f d
 	if f.threads < 1 {
 		return nil, errors.New("--threads precisa ser pelo menos 1")
 	}
+	audio, err := parseAudio(f.audio)
+	if err != nil {
+		return nil, err
+	}
 	s := &session{cmd: cmd, progress: progressPrinter(cmd.ErrOrStderr())}
 	s.env = newEnv(s.progress)
 	fetcher, conv, warnings, err := s.env.tools(cmd.Context(), f, confirmInstall(cmd, f.yes))
@@ -155,12 +188,22 @@ func newSession(cmd *cobra.Command, newEnv func(func(int, int)) downloadEnv, f d
 	for _, w := range warnings {
 		fmt.Fprintln(cmd.ErrOrStderr(), "aviso:", w)
 	}
+	finder := s.env.finder
+	if s.env.newFinder != nil {
+		ytdlp := ""
+		if y, ok := fetcher.(*download.YTDLP); ok {
+			ytdlp = y.Path
+		}
+		if finder, err = s.env.newFinder(audio, ytdlp); err != nil {
+			return nil, err
+		}
+	}
 	s.p = &download.Pipeline{
-		Finder: s.env.finder, Fetcher: fetcher, Converter: conv, Covers: s.env.covers,
+		Finder: finder, Fetcher: fetcher, Converter: conv, Covers: s.env.covers,
 		Options: download.Options{
 			Dir: dir, Template: tmpl, Format: format, Bitrate: f.bitrate, Overwrite: f.overwrite,
 			SearchWorkers: f.threads, DownloadWorkers: f.threads,
-			ErrNotFound: ytmusic.ErrNotFound,
+			ErrNotFound: provider.ErrNotFound,
 		},
 	}
 	return s, nil
@@ -266,7 +309,7 @@ func summary(c map[download.Status]int) string {
 		parts = append(parts, plural(n, "já existia", "já existiam"))
 	}
 	if n := c[download.NotFound]; n > 0 {
-		parts = append(parts, plural(n, "não achada", "não achadas")+" no YouTube Music")
+		parts = append(parts, plural(n, "não achada", "não achadas"))
 	}
 	if n := c[download.Failed]; n > 0 {
 		parts = append(parts, fmt.Sprintf("%d com erro", n))

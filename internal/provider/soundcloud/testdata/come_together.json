@@ -1,0 +1,45 @@
+{
+ "_type": "playlist",
+ "entries": [
+  {
+   "url": "https://api.soundcloud.com/tracks/soundcloud%3Atracks%3A308477608",
+   "title": "Come Together",
+   "uploader": "The Beatles Sessions",
+   "duration": 272.008,
+   "view_count": 47487,
+   "id": "308477608"
+  },
+  {
+   "url": "https://api.soundcloud.com/tracks/soundcloud%3Atracks%3A1557624721",
+   "title": "The Beatles - Come Together (Acid Rats Rave edit)Free DL",
+   "uploader": "ACID RATS ❷ ➂",
+   "duration": 446.506,
+   "view_count": 118066,
+   "id": "1557624721"
+  },
+  {
+   "url": "https://api.soundcloud.com/tracks/soundcloud%3Atracks%3A1257998779",
+   "title": "Come Together- Remastered 2009",
+   "uploader": "The Beatles",
+   "duration": 43.779,
+   "view_count": 150692,
+   "id": "1257998779"
+  },
+  {
+   "url": "https://api.soundcloud.com/tracks/soundcloud%3Atracks%3A166254800",
+   "title": "The Beatles - Come Together",
+   "uploader": "Rocking Chair",
+   "duration": 265.222,
+   "view_count": 351392,
+   "id": "166254800"
+  },
+  {
+   "url": "https://api.soundcloud.com/tracks/soundcloud%3Atracks%3A1689661854",
+   "title": "The Beatles - Come Together (Yojiman, Nino Tores Edit)",
+   "uploader": "Yojiman",
+   "duration": 367.915,
+   "view_count": 65063,
+   "id": "1689661854"
+  }
+ ]
+}

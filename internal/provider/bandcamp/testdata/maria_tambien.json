@@ -1,0 +1,96 @@
+{
+ "auto": {
+  "results": [
+   {
+    "type": "t",
+    "id": 4094756748,
+    "art_id": 3868691890,
+    "img_id": null,
+    "name": "Maria También",
+    "band_id": 3521041845,
+    "band_name": "Khruangbin",
+    "album_name": "Con Todo El Mundo (N & S America Edition)",
+    "item_url_root": "https://khruangbin.bandcamp.com",
+    "item_url_path": "https://khruangbin.bandcamp.com/track/maria-tambi-n-2",
+    "img": "https://f4.bcbits.com/img/3868691890_3.jpg",
+    "album_id": 906393946,
+    "stat_params": "search_item_id=4094756748&search_item_type=t&search_match_part=%3F&search_page_id=6004177586&search_page_no=0&search_rank=1"
+   },
+   {
+    "type": "t",
+    "id": 2896282580,
+    "art_id": 3530578045,
+    "img_id": null,
+    "name": "Maria También",
+    "band_id": 3521041845,
+    "band_name": "Khruangbin",
+    "album_name": "Con Todo El Mundo (World ex N & S America)",
+    "item_url_root": "https://khruangbin.bandcamp.com",
+    "item_url_path": "https://khruangbin.bandcamp.com/track/maria-tambi-n",
+    "img": "https://f4.bcbits.com/img/3530578045_3.jpg",
+    "album_id": 152628405,
+    "stat_params": "search_item_id=2896282580&search_item_type=t&search_match_part=%3F&search_page_id=6004177586&search_page_no=0&search_rank=2"
+   },
+   {
+    "type": "t",
+    "id": 1802967646,
+    "art_id": 599487480,
+    "img_id": null,
+    "name": "Maria Tambien (Live at Sydney Opera House)",
+    "band_id": 3521041845,
+    "band_name": "Khruangbin",
+    "album_name": "Khruangbin: Live at Sydney Opera House",
+    "item_url_root": "https://khruangbin.bandcamp.com",
+    "item_url_path": "https://khruangbin.bandcamp.com/track/maria-tambien-live-at-sydney-opera-house",
+    "img": "https://f4.bcbits.com/img/0599487480_3.jpg",
+    "album_id": 1974811359,
+    "stat_params": "search_item_id=1802967646&search_item_type=t&search_match_part=%3F&search_page_id=6004177586&search_page_no=0&search_rank=3"
+   },
+   {
+    "type": "t",
+    "id": 2950309803,
+    "art_id": 2618187914,
+    "img_id": null,
+    "name": "Maria También (Live at The Fillmore Miami)",
+    "band_id": 3521041845,
+    "band_name": "Khruangbin",
+    "album_name": "Khruangbin & Toro y Moi: Live at The Fillmore Miami",
+    "item_url_root": "https://khruangbin.bandcamp.com",
+    "item_url_path": "https://khruangbin.bandcamp.com/track/maria-tambi-n-live-at-the-fillmore-miami",
+    "img": "https://f4.bcbits.com/img/2618187914_3.jpg",
+    "album_id": 2351794918,
+    "stat_params": "search_item_id=2950309803&search_item_type=t&search_match_part=%3F&search_page_id=6004177586&search_page_no=0&search_rank=4"
+   },
+   {
+    "type": "t",
+    "id": 1812965642,
+    "art_id": 913650616,
+    "img_id": null,
+    "name": "Khrungbin - Maria Tambien (Cumbia Mix)",
+    "band_id": 2307882655,
+    "band_name": "PALOMO",
+    "album_name": null,
+    "item_url_root": "https://deliciosacumbia.bandcamp.com",
+    "item_url_path": "https://deliciosacumbia.bandcamp.com/track/khrungbin-maria-tambien-cumbia-mix",
+    "img": "https://f4.bcbits.com/img/0913650616_3.jpg",
+    "album_id": null,
+    "stat_params": "search_item_id=1812965642&search_item_type=t&search_match_part=%3F&search_page_id=6004177586&search_page_no=0&search_rank=5"
+   },
+   {
+    "type": "t",
+    "id": 2115614702,
+    "art_id": 1581900559,
+    "img_id": null,
+    "name": "Maria Tambien",
+    "band_id": 2944362709,
+    "band_name": "Andy Lipke",
+    "album_name": "Ides of March Khruangbin set 3.18.23",
+    "item_url_root": "https://andylipke.bandcamp.com",
+    "item_url_path": "https://andylipke.bandcamp.com/track/maria-tambien",
+    "img": "https://f4.bcbits.com/img/1581900559_3.jpg",
+    "album_id": 3270281314,
+    "stat_params": "search_item_id=2115614702&search_item_type=t&search_match_part=%3F&search_page_id=6004177586&search_page_no=0&search_rank=6"
+   }
+  ]
+ }
+}

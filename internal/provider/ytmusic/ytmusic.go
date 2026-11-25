@@ -6,17 +6,17 @@ package ytmusic
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/DeathHapyness/spotGO/internal/fetch"
 	"github.com/DeathHapyness/spotGO/internal/matching"
+	"github.com/DeathHapyness/spotGO/internal/provider"
 	"github.com/DeathHapyness/spotGO/internal/song"
 )
 
-var ErrNotFound = errors.New("não encontrada no YouTube Music")
+var ErrNotFound = fmt.Errorf("%w no YouTube Music", provider.ErrNotFound)
 
 const (
 	defaultBase = "https://music.youtube.com"
