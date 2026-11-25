@@ -6,7 +6,7 @@
 
 [![MIT License](https://img.shields.io/github/license/DeathHapyness/spotGO?color=44CC11&style=flat-square)](LICENSE)
 [![Go version](https://img.shields.io/github/go-mod/go-version/DeathHapyness/spotGO?color=44CC11&style=flat-square)](go.mod)
-[![CI](https://img.shields.io/github/actions/workflow/status/DeathHapyness/spotGO/go.yml?branch=go-rewrite&label=testes&style=flat-square)](https://github.com/DeathHapyness/spotGO/actions/workflows/go.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/DeathHapyness/spotGO/go.yml?branch=master&label=testes&style=flat-square)](https://github.com/DeathHapyness/spotGO/actions/workflows/go.yml)
 ![GitHub Repo stars](https://img.shields.io/github/stars/DeathHapyness/spotGO?style=flat-square)
 
 > spotGO: o spotDL reescrito em Go. Um binário só, sem Python, sem conta e sem credenciais.
