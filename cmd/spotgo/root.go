@@ -33,6 +33,7 @@ Quem tem Spotify Premium pode usar credenciais próprias (spotgo auth) como modo
 	cmd.AddCommand(newURLCmd(func(p func(int, int)) resolver { return newPublicResolver(p) },
 		func() finder { return newYTMusic() }))
 	cmd.AddCommand(newSetupCmd(newSetupDeps))
+	cmd.AddCommand(newDownloadCmd(newDownloadEnv))
 
 	return cmd
 }

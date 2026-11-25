@@ -16,8 +16,8 @@
 ______________________________________________________________________
 
 > [!WARNING]
-> **Em desenvolvimento.** Por enquanto o spotGO já lê os metadados (`spotgo save`) e encontra o
-> áudio de cada faixa no YouTube Music (`spotgo url`), mas ainda não baixa o áudio. Acompanhe o [design](docs/superpowers/specs/2026-11-21-spotgo-design.md)
+> **Em desenvolvimento.** O `spotgo download` já baixa faixas, álbuns, playlists e artistas com capa e
+> metadados; `sync`, `meta` e `login` ainda não existem. Acompanhe o [design](docs/superpowers/specs/2026-11-21-spotgo-design.md)
 > e a lista de [operações](#operações) abaixo.
 
 ______________________________________________________________________
@@ -31,7 +31,8 @@ usuários**. Quando a cota estoura, a ferramenta quebra para todo mundo ao mesmo
 - **Não precisa de conta nem de credenciais.** A lista de faixas vem da página pública de embed do
   Spotify e os metadados (álbum, número da faixa, ISRC, capa 1000×1000) vêm da API pública do Deezer.
 - **Faz menos requisições:** cache em disco, limite de taxa por site e retry que respeita o `Retry-After`.
-- **É leve:** binário único em Go, sem Python. O download vai ser em paralelo, com uma única passada do ffmpeg por faixa.
+- **É leve:** binário único em Go, sem Python. O download é em paralelo, com uma única passada do ffmpeg por faixa
+  (e sem reencodar quando o formato do YouTube já serve, como no `--format opus`).
 - **Credenciais próprias são opcionais**, para quem tem Spotify Premium e quer playlists com mais de 100 faixas
   (veja [Modo avançado](#modo-avançado-opcional)).
 
@@ -99,6 +100,17 @@ ou `spotgo [operação] -h`.
 Exemplos:
 
 ```sh
+# baixa uma faixa como "Artista - Título.mp3" na pasta atual
+spotgo download https://open.spotify.com/track/2EqlS6tkEnglzr7tkKAAYD
+
+# um álbum em opus, separado em pastas
+spotgo download --format opus -o "{album-artist}/{album}/{track-number} {title}" \
+  https://open.spotify.com/album/0ETFjACtuP2ADo6LFhL6HN
+
+# uma playlist numerada, numa pasta com o nome dela
+spotgo download -o "{list-name}/{list-position} - {artists} - {title}" \
+  https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M
+
 # metadados de um álbum, em texto
 spotgo save https://open.spotify.com/album/0ETFjACtuP2ADo6LFhL6HN
 
@@ -118,7 +130,7 @@ spotgo url https://open.spotify.com/album/0ETFjACtuP2ADo6LFhL6HN
 |---|---|---|
 | `save` | Mostra os metadados (título, artistas, álbum, duração, ISRC) sem baixar nada. `--json` para usar com `jq`. | ✅ pronto |
 | `auth` | Configura as credenciais próprias da API do Spotify (modo avançado). | ✅ pronto |
-| `download` | Baixa as faixas do YouTube Music com capa e metadados. | 🚧 em breve |
+| `download` | Baixa as faixas do YouTube Music com capa e metadados (mp3, m4a, opus, ogg, flac, wav). Pula as que já existem. | ✅ pronto |
 | `url` | Mostra o link do áudio encontrado no YouTube Music para cada faixa. `--json` para usar com `jq`. | ✅ pronto |
 | `sync` | Sincroniza uma pasta com uma playlist: baixa as faixas novas e apaga as removidas. | 🚧 em breve |
 | `meta` | Atualiza os metadados de arquivos de música que você já tem. | 🚧 em breve |

@@ -1,0 +1,288 @@
+package main
+
+import (
+	"bufio"
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/spf13/cobra"
+	"golang.org/x/term"
+
+	"github.com/DeathHapyness/spotGO/internal/deps"
+	"github.com/DeathHapyness/spotGO/internal/download"
+	"github.com/DeathHapyness/spotGO/internal/ffmpeg"
+	"github.com/DeathHapyness/spotGO/internal/output"
+	"github.com/DeathHapyness/spotGO/internal/provider/ytmusic"
+	"github.com/DeathHapyness/spotGO/internal/song"
+	"github.com/DeathHapyness/spotGO/internal/source"
+)
+
+type downloadFlags struct {
+	output    string
+	format    string
+	bitrate   string
+	overwrite bool
+	threads   int
+	yes       bool
+	tools     map[deps.Tool]*string
+}
+
+// downloadEnv é o que o comando precisa do mundo de fora (trocado nos testes).
+type downloadEnv struct {
+	resolver resolver
+	finder   download.Finder
+	covers   download.Covers
+	// tools localiza (e, se preciso, instala) os binários e monta o yt-dlp e o ffmpeg.
+	tools func(ctx context.Context, f downloadFlags, confirm func(missing []deps.Tool) error) (download.Fetcher, download.Converter, []string, error)
+}
+
+func newDownloadCmd(newEnv func(progress func(done, total int)) downloadEnv) *cobra.Command {
+	f := downloadFlags{tools: map[deps.Tool]*string{}}
+	cmd := &cobra.Command{
+		Use:   "download <link>...",
+		Short: "Baixa as faixas com capa e metadados",
+		Long: `Lê os links do Spotify (faixa, álbum, playlist ou artista), procura cada faixa
+no YouTube Music, baixa o áudio com o yt-dlp e grava o arquivo final com o
+ffmpeg, já com as tags e a capa. Faixas que já existem são puladas.
+
+Variáveis do --output: {title} {artists} {artist} {album} {album-artist}
+{track-number} {tracks-count} {disc-number} {year} {date} {isrc} {track-id}
+{duration} {list-name} {list-position} {list-length} {output-ext}.
+Uma / no template cria pastas.`,
+		Example: `  spotgo download https://open.spotify.com/track/2EqlS6tkEnglzr7tkKAAYD
+  spotgo download -o "{album-artist}/{album}/{track-number} {title}" --format opus <álbum>
+  spotgo download -o "{list-name}/{list-position} - {artists} - {title}" <playlist>`,
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx, stdout, stderr := cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr()
+			format, err := ffmpeg.ParseFormat(f.format)
+			if err != nil {
+				return err
+			}
+			tmpl, err := output.Parse(f.output)
+			if err != nil {
+				return err
+			}
+			if f.threads < 1 {
+				return errors.New("--threads precisa ser pelo menos 1")
+			}
+
+			progress := progressPrinter(stderr)
+			env := newEnv(progress)
+			fetcher, conv, warnings, err := env.tools(ctx, f, confirmInstall(cmd, f.yes))
+			if err != nil {
+				return err
+			}
+			for _, w := range warnings {
+				fmt.Fprintln(stderr, "aviso:", w)
+			}
+
+			var items []download.Item
+			linkErrs := 0
+			for _, link := range args {
+				res, err := resolveLink(cmd, env.resolver, link)
+				clearProgress(stderr, progress)
+				if ctx.Err() != nil {
+					return errors.New("interrompido")
+				}
+				if err != nil {
+					linkErrs++
+					fmt.Fprintf(stderr, "erro: %s: %v\n", link, err)
+					continue
+				}
+				printWarnings(stderr, res)
+				items = append(items, toItems(res)...)
+			}
+
+			p := &download.Pipeline{
+				Finder: env.finder, Fetcher: fetcher, Converter: conv, Covers: env.covers,
+				Options: download.Options{
+					Template: tmpl, Format: format, Bitrate: f.bitrate, Overwrite: f.overwrite,
+					SearchWorkers: f.threads, DownloadWorkers: f.threads,
+					ErrNotFound: ytmusic.ErrNotFound,
+				},
+			}
+			counts := map[download.Status]int{}
+			live := liveStatus(stderr, len(items))
+			p.OnStage = func(i int, stage string) { live.stage(items[i].Song, stage) }
+			p.OnDone = func(i int, o download.Outcome) {
+				counts[o.Status]++
+				live.clear()
+				printOutcome(stdout, stderr, o)
+				live.done()
+			}
+			p.Run(ctx, items)
+			live.clear()
+
+			if ctx.Err() != nil {
+				return errors.New("interrompido")
+			}
+			if len(items) > 0 {
+				fmt.Fprintln(stderr, summary(counts))
+			}
+			switch {
+			case linkErrs > 0:
+				return fmt.Errorf("%d de %d links falharam", linkErrs, len(args))
+			case counts[download.Failed] > 0:
+				return fmt.Errorf("%d faixas falharam; rode de novo para tentar outra vez", counts[download.Failed])
+			}
+			return nil
+		},
+	}
+	fl := cmd.Flags()
+	fl.StringVarP(&f.output, "output", "o", output.DefaultTemplate, "template do caminho de cada arquivo")
+	fl.StringVar(&f.format, "format", "mp3", "formato: mp3, m4a, opus, ogg, flac ou wav")
+	fl.StringVar(&f.bitrate, "bitrate", "", `bitrate do áudio (ex.: "320k"); o padrão evita reencodar à toa`)
+	fl.BoolVar(&f.overwrite, "overwrite", false, "baixa de novo faixas que já existem")
+	fl.IntVar(&f.threads, "threads", 4, "buscas e downloads simultâneos")
+	fl.BoolVarP(&f.yes, "yes", "y", false, "baixa o yt-dlp, o ffmpeg ou o deno sem perguntar, se faltarem")
+	for _, t := range deps.Tools {
+		f.tools[t] = fl.String(string(t), "", "caminho do "+string(t))
+	}
+	return cmd
+}
+
+func toItems(r source.Result) []download.Item {
+	list := ""
+	if r.Ref.Kind != song.KindTrack {
+		list = r.Name
+	}
+	items := make([]download.Item, len(r.Songs))
+	for i, s := range r.Songs {
+		items[i] = download.Item{Song: s, ListName: list, ListPosition: i + 1, ListLength: len(r.Songs)}
+	}
+	return items
+}
+
+func printOutcome(stdout, stderr io.Writer, o download.Outcome) {
+	label := songLabel(o.Song)
+	switch o.Status {
+	case download.Downloaded:
+		fmt.Fprintf(stdout, "baixado     %s  →  %s\n", label, o.Path)
+	case download.Skipped:
+		fmt.Fprintf(stdout, "já existe   %s  (%s)\n", label, o.Path)
+	case download.NotFound:
+		fmt.Fprintf(stdout, "não achada  %s\n", label)
+	case download.Failed:
+		fmt.Fprintf(stderr, "erro        %s: %v\n", label, o.Err)
+	}
+}
+
+func summary(c map[download.Status]int) string {
+	parts := []string{plural(c[download.Downloaded], "baixada", "baixadas")}
+	if n := c[download.Skipped]; n > 0 {
+		parts = append(parts, plural(n, "já existia", "já existiam"))
+	}
+	if n := c[download.NotFound]; n > 0 {
+		parts = append(parts, plural(n, "não achada", "não achadas")+" no YouTube Music")
+	}
+	if n := c[download.Failed]; n > 0 {
+		parts = append(parts, fmt.Sprintf("%d com erro", n))
+	}
+	return strings.Join(parts, ", ")
+}
+
+func plural(n int, one, many string) string {
+	if n == 1 {
+		return "1 " + one
+	}
+	return fmt.Sprintf("%d %s", n, many)
+}
+
+type live struct {
+	w     io.Writer
+	total int
+	n     int
+	on    bool
+}
+
+// liveStatus mostra "[3/20] baixando Artista - Título" numa linha só, se o stderr for um terminal.
+func liveStatus(w io.Writer, total int) *live {
+	l := &live{w: w, total: total}
+	if f, ok := w.(*os.File); ok && term.IsTerminal(int(f.Fd())) {
+		l.on = true
+	}
+	return l
+}
+
+func (l *live) stage(s song.Song, stage string) {
+	if l.on {
+		fmt.Fprintf(l.w, "\r\033[K[%d/%d] %s %s", l.n, l.total, stage, songLabel(s))
+	}
+}
+
+func (l *live) done() { l.n++ }
+
+func (l *live) clear() {
+	if l.on {
+		fmt.Fprint(l.w, "\r\033[K")
+	}
+}
+
+// confirmInstall decide se pode baixar os binários que faltam.
+func confirmInstall(cmd *cobra.Command, yes bool) func(missing []deps.Tool) error {
+	return func(missing []deps.Tool) error {
+		names := make([]string, len(missing))
+		for i, t := range missing {
+			names[i] = string(t)
+		}
+		list := strings.Join(names, ", ")
+		if yes {
+			return nil
+		}
+		in, ok := stdinTerminal(cmd)
+		if !ok {
+			return fmt.Errorf("faltam %s; rode spotgo setup (ou use --yes para baixar agora)", list)
+		}
+		fmt.Fprintf(cmd.ErrOrStderr(), "Faltam %s. Baixar agora as versões oficiais? [S/n] ", list)
+		ans, _ := bufio.NewReader(in).ReadString('\n')
+		switch strings.ToLower(strings.TrimSpace(ans)) {
+		case "", "s", "sim", "y", "yes":
+			return nil
+		}
+		return fmt.Errorf("faltam %s; rode spotgo setup quando quiser", list)
+	}
+}
+
+// ensureTools acha os três binários e instala os que faltam (depois de confirm).
+func ensureTools(ctx context.Context, loc *deps.Locator, install func(context.Context, deps.Tool) (string, error),
+	confirm func([]deps.Tool) error, now time.Time) (map[deps.Tool]deps.Found, []string, error) {
+	found := map[deps.Tool]deps.Found{}
+	var missing []deps.Tool
+	for _, t := range deps.Tools {
+		f, err := loc.Locate(ctx, t)
+		switch {
+		case errors.Is(err, deps.ErrMissing):
+			missing = append(missing, t)
+		case err != nil:
+			return nil, nil, err
+		default:
+			found[t] = f
+		}
+	}
+	if len(missing) > 0 {
+		if err := confirm(missing); err != nil {
+			return nil, nil, err
+		}
+		for _, t := range missing {
+			path, err := install(ctx, t)
+			if err != nil {
+				return nil, nil, fmt.Errorf("instalando o %s: %w", t, err)
+			}
+			found[t] = deps.Found{Tool: t, Path: path, Origin: deps.FromManaged, Version: loc.Version(ctx, t, path)}
+		}
+	}
+	var warnings []string
+	if y := found[deps.YTDLP]; y.Version != "" {
+		if age, ok := deps.YTDLPAge(y.Version, now); ok && age > deps.MaxYTDLPAge {
+			warnings = append(warnings, fmt.Sprintf("o yt-dlp (%s) tem %d dias e pode não funcionar com o YouTube; rode spotgo setup --update",
+				y.Path, int(age.Hours()/24)))
+		}
+	}
+	return found, warnings, nil
+}

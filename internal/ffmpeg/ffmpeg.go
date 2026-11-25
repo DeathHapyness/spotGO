@@ -143,6 +143,10 @@ func (c *Converter) Convert(ctx context.Context, job Job) error {
 		}
 		return fmt.Errorf("ffmpeg falhou em %s: %w%s", filepath.Base(job.Input), err, tail(stderr))
 	}
+	// O CreateTemp cria com 0600; música é para os outros programas lerem.
+	if err := os.Chmod(tmp.Name(), 0o644); err != nil {
+		return err
+	}
 	return os.Rename(tmp.Name(), job.Output)
 }
 

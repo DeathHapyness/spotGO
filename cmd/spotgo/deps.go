@@ -16,8 +16,10 @@ import (
 	"github.com/DeathHapyness/spotGO/internal/config"
 	"github.com/DeathHapyness/spotGO/internal/deezer"
 	"github.com/DeathHapyness/spotGO/internal/deps"
+	"github.com/DeathHapyness/spotGO/internal/download"
 	"github.com/DeathHapyness/spotGO/internal/embed"
 	"github.com/DeathHapyness/spotGO/internal/fetch"
+	"github.com/DeathHapyness/spotGO/internal/ffmpeg"
 	"github.com/DeathHapyness/spotGO/internal/provider/ytmusic"
 	"github.com/DeathHapyness/spotGO/internal/song"
 	"github.com/DeathHapyness/spotGO/internal/source"
@@ -62,6 +64,45 @@ func newSetupDeps(progress func(t deps.Tool, done, total int64)) setupDeps {
 		version: loc.Version,
 		now:     time.Now,
 	}
+}
+
+func newDownloadEnv(progress func(done, total int)) downloadEnv {
+	f := newFetch()
+	p := source.NewPublic(embed.New(f), deezer.New(f))
+	p.Progress = progress
+	return downloadEnv{
+		resolver: p,
+		finder:   ytmusic.New(f),
+		covers:   coverFetcher{f},
+		tools:    downloadTools,
+	}
+}
+
+type coverFetcher struct{ f *fetch.Client }
+
+func (c coverFetcher) Cover(ctx context.Context, url string) ([]byte, error) {
+	return c.f.Get(ctx, fetch.Request{URL: url, CacheTTL: 30 * 24 * time.Hour})
+}
+
+func downloadTools(ctx context.Context, fl downloadFlags, confirm func([]deps.Tool) error) (download.Fetcher, download.Converter, []string, error) {
+	dir, dirErr := deps.ManagedDir()
+	loc := &deps.Locator{Dir: dir, Flags: map[deps.Tool]string{}}
+	for t, p := range fl.tools {
+		loc.Flags[t] = *p
+	}
+	in := &deps.Installer{Dir: dir}
+	install := func(ctx context.Context, t deps.Tool) (string, error) {
+		if dirErr != nil {
+			return "", dirErr
+		}
+		return in.Install(ctx, t)
+	}
+	found, warnings, err := ensureTools(ctx, loc, install, confirm, time.Now())
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	y := &download.YTDLP{Path: found[deps.YTDLP].Path, Deno: found[deps.Deno].Path}
+	return y, &ffmpeg.Converter{Path: found[deps.FFmpeg].Path}, warnings, nil
 }
 
 func newFetch() *fetch.Client {

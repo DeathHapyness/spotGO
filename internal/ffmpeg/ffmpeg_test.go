@@ -238,6 +238,9 @@ func TestConvertReal(t *testing.T) {
 			if f != WAV && !hasCover {
 				t.Errorf("sem capa: %+v", p.Streams)
 			}
+			if st, err := os.Stat(out); err != nil || st.Mode().Perm() != 0o644 {
+				t.Errorf("permissão: %v %v", st.Mode(), err)
+			}
 			if ents, _ := os.ReadDir(filepath.Dir(out)); len(ents) != 1 {
 				t.Errorf("sobrou temporário: %v", ents)
 			}
