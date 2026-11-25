@@ -21,6 +21,7 @@ type Meta interface {
 	EnrichAlbum(ctx context.Context, name, artist string, songs []song.Song) ([]song.Song, error)
 	Discography(ctx context.Context, artist string, types []string) ([]deezer.AlbumRef, error)
 	AlbumSongs(ctx context.Context, id int64) ([]song.Song, error)
+	SearchTrack(ctx context.Context, q string) (song.Song, error)
 }
 
 var (

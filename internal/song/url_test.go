@@ -50,3 +50,24 @@ func TestParseURLErrors(t *testing.T) {
 		}
 	}
 }
+
+func TestParseInput(t *testing.T) {
+	tests := map[string]Ref{
+		"never gonna give you up":                               {KindSearch, "never gonna give you up"},
+		"  Beatles: Come Together ":                             {KindSearch, "Beatles: Come Together"},
+		"spotify:track:2EqlS6tkEnglzr7tkKAAYD":                  {KindTrack, "2EqlS6tkEnglzr7tkKAAYD"},
+		"https://open.spotify.com/album/0ETFjACtuP2ADo6LFhL6HN": {KindAlbum, "0ETFjACtuP2ADo6LFhL6HN"},
+		"open.spotify.com/track/2EqlS6tkEnglzr7tkKAAYD":         {KindTrack, "2EqlS6tkEnglzr7tkKAAYD"},
+	}
+	for in, want := range tests {
+		got, err := ParseInput(in)
+		if err != nil || got != want {
+			t.Errorf("ParseInput(%q) = %+v, %v", in, got, err)
+		}
+	}
+	for _, bad := range []string{"", "https://youtube.com/watch?v=x", "spotify:show:2EqlS6tkEnglzr7tkKAAYD"} {
+		if _, err := ParseInput(bad); err == nil {
+			t.Errorf("ParseInput(%q): esperava erro", bad)
+		}
+	}
+}

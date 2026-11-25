@@ -13,6 +13,8 @@ const (
 	KindAlbum    Kind = "album"
 	KindPlaylist Kind = "playlist"
 	KindArtist   Kind = "artist"
+	// KindSearch: o ID é o texto da busca.
+	KindSearch Kind = "search"
 )
 
 type Ref struct {
@@ -76,4 +78,19 @@ func isBase62ID(s string) bool {
 		}
 	}
 	return true
+}
+
+// ParseInput aceita um link ou URI do Spotify; qualquer outro texto vira busca.
+func ParseInput(raw string) (Ref, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return Ref{}, fmt.Errorf("link vazio")
+	}
+	if strings.HasPrefix(raw, "spotify:") || strings.Contains(raw, "://") || strings.HasPrefix(raw, "open.spotify.com/") {
+		if strings.HasPrefix(raw, "open.spotify.com/") {
+			raw = "https://" + raw
+		}
+		return ParseURL(raw)
+	}
+	return Ref{Kind: KindSearch, ID: raw}, nil
 }

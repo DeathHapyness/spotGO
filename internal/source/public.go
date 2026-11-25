@@ -36,6 +36,8 @@ func (p *Public) Resolve(ctx context.Context, ref song.Ref) (Result, error) {
 		err = p.album(ctx, &r)
 	case song.KindArtist:
 		err = p.artist(ctx, &r)
+	case song.KindSearch:
+		err = p.search(ctx, &r)
 	default:
 		return Result{}, fmt.Errorf("%s: ainda não suportado", ref.Kind)
 	}
@@ -44,6 +46,18 @@ func (p *Public) Resolve(ctx context.Context, ref song.Ref) (Result, error) {
 	}
 	r.Unmatched = countUnmatched(r.Songs)
 	return r, nil
+}
+
+func (p *Public) search(ctx context.Context, r *Result) error {
+	s, err := p.meta.SearchTrack(ctx, r.Ref.ID)
+	if errors.Is(err, deezer.ErrNotFound) {
+		return fmt.Errorf("nada encontrado no Deezer para %q", r.Ref.ID)
+	}
+	if err != nil {
+		return err
+	}
+	r.Name, r.Artist, r.Songs = s.Title, strings.Join(s.Artists, ", "), []song.Song{s}
+	return nil
 }
 
 func (p *Public) track(ctx context.Context, r *Result) error {

@@ -204,6 +204,74 @@ func (c *Client) AlbumSongs(ctx context.Context, id int64) ([]song.Song, error) 
 	return out, nil
 }
 
+// SearchTrack devolve a faixa mais relevante da busca do Deezer, completa
+// (ISRC, número da faixa, capa). Sem resultado: ErrNotFound.
+func (c *Client) SearchTrack(ctx context.Context, q string) (song.Song, error) {
+	cands, err := c.searchTracks(ctx, q)
+	if err != nil {
+		return song.Song{}, err
+	}
+	if len(cands) == 0 {
+		return song.Song{}, ErrNotFound
+	}
+	t, err := c.original(ctx, cands)
+	if err != nil {
+		return song.Song{}, err
+	}
+	return song.Song{
+		Title:       t.Title,
+		Artists:     []string{t.Artist.Name},
+		Album:       t.Album.Title,
+		AlbumArtist: t.Artist.Name,
+		TrackNumber: t.TrackPosition,
+		TrackCount:  t.Album.NbTracks,
+		DiscNumber:  t.DiskNumber,
+		Duration:    time.Duration(t.Duration) * time.Second,
+		ReleaseDate: firstNonEmpty(t.Album.ReleaseDate, t.ReleaseDate),
+		ISRC:        t.ISRC,
+		CoverURL:    t.Album.CoverXL,
+		Explicit:    t.Explicit,
+	}, nil
+}
+
+// maxOriginal limita as leituras extras ao procurar a edição original.
+const maxOriginal = 5
+
+// original: segue a relevância do Deezer, mas pula a gravação que está num
+// álbum de vários artistas ou com cara de coletânea (o primeiro resultado de
+// "never gonna give you up" é "Reeling In The Decades", de Vários intérpretes).
+// Sem alternativa, fica com o primeiro.
+func (c *Client) original(ctx context.Context, cands []apiTrack) (apiTrack, error) {
+	first := cands[0]
+	chosen := first
+	checked := 0
+	for _, t := range cands {
+		d := t.Duration - first.Duration
+		if t.Title != first.Title || t.Artist.Name != first.Artist.Name || d < -3 || d > 3 {
+			continue
+		}
+		if checked == maxOriginal {
+			break
+		}
+		checked++
+		if isCompilation(t.Album.Title) {
+			continue
+		}
+		al, err := c.album(ctx, t.Album.ID)
+		if err != nil {
+			if ctx.Err() != nil {
+				return apiTrack{}, ctx.Err()
+			}
+			continue
+		}
+		if textnorm.SameArtist(al.Artist.Name, t.Artist.Name) {
+			chosen = t
+			break
+		}
+	}
+	return c.track(ctx, chosen.ID)
+}
+
 func notFoundIsNil(err error) error {
 	if errors.Is(err, ErrNotFound) {
 		return nil

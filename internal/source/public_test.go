@@ -44,6 +44,13 @@ type fakeMeta struct {
 	albumErr   map[int64]error
 }
 
+func (f *fakeMeta) SearchTrack(_ context.Context, q string) (song.Song, error) {
+	if q == "nada" {
+		return song.Song{}, deezer.ErrNotFound
+	}
+	return song.Song{Title: "Achada: " + q, Artists: []string{"A"}, ISRC: "X"}, nil
+}
+
 func (f *fakeMeta) EnrichTrack(ctx context.Context, s song.Song) (song.Song, bool, error) {
 	f.enriched = append(f.enriched, s.Title)
 	if f.onEnrich != nil {
@@ -362,5 +369,16 @@ func TestArtistNoReleases(t *testing.T) {
 	_, err := artistSetup(m).Resolve(context.Background(), song.Ref{Kind: song.KindArtist, ID: "ar"})
 	if err == nil || !strings.Contains(err.Error(), "The Beatles") {
 		t.Fatalf("err = %v, quero erro citando o artista", err)
+	}
+}
+
+func TestResolveSearch(t *testing.T) {
+	p := NewPublic(&fakeEmbed{}, &fakeMeta{})
+	r, err := p.Resolve(context.Background(), song.Ref{Kind: song.KindSearch, ID: "come together"})
+	if err != nil || len(r.Songs) != 1 || r.Songs[0].Title != "Achada: come together" || r.Unmatched != 0 {
+		t.Fatalf("Resolve = %+v, %v", r, err)
+	}
+	if _, err := p.Resolve(context.Background(), song.Ref{Kind: song.KindSearch, ID: "nada"}); err == nil || !strings.Contains(err.Error(), "nada encontrado") {
+		t.Errorf("err = %v", err)
 	}
 }

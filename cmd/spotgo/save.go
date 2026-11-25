@@ -20,6 +20,7 @@ var kindNames = map[song.Kind]string{
 	song.KindAlbum:    "álbum",
 	song.KindPlaylist: "playlist",
 	song.KindArtist:   "artista",
+	song.KindSearch:   "busca",
 }
 
 func newSaveCmd(newResolver func(progress func(done, total int)) resolver) *cobra.Command {
@@ -78,7 +79,7 @@ Não precisa de conta nem de credenciais.`,
 }
 
 func resolveLink(cmd *cobra.Command, r resolver, link string) (source.Result, error) {
-	ref, err := song.ParseURL(link)
+	ref, err := song.ParseInput(link)
 	if err != nil {
 		return source.Result{}, err
 	}

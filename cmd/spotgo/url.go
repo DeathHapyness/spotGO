@@ -42,7 +42,7 @@ func newURLCmd(newResolver func(progress func(done, total int)) resolver, newFin
 	var asJSON bool
 	var audioFlag string
 	cmd := &cobra.Command{
-		Use:   "url <link>...",
+		Use:   "url <link ou busca>...",
 		Short: "Mostra o link do áudio encontrado para cada faixa",
 		Long: `Lê os links do Spotify (faixa, álbum, playlist ou artista), procura cada faixa
 nos provedores do --audio e mostra o link do áudio que o spotgo baixaria. Não baixa nada.`,

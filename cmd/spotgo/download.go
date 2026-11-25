@@ -54,14 +54,16 @@ func newDownloadCmd(newEnv func(progress func(done, total int)) downloadEnv) *co
 	f := downloadFlags{tools: map[deps.Tool]*string{}}
 	var archivePath string
 	cmd := &cobra.Command{
-		Use:   "download <link>...",
+		Use:   "download <link ou busca>...",
 		Short: "Baixa as faixas com capa e metadados",
 		Long: `Lê os links do Spotify (faixa, álbum, playlist ou artista), procura cada faixa
 no YouTube Music, baixa o áudio com o yt-dlp e grava o arquivo final com o
 ffmpeg, já com as tags e a capa. Faixas que já existem são puladas.
+Um texto que não é link vira busca: baixa a faixa mais relevante do Deezer.
 
 ` + templateHelp,
 		Example: `  spotgo download https://open.spotify.com/track/2EqlS6tkEnglzr7tkKAAYD
+  spotgo download "rick astley never gonna give you up"
   spotgo download -o "{album-artist}/{album}/{track-number} {title}" --format opus <álbum>
   spotgo download -o "{list-name}/{list-position} - {artists} - {title}" <playlist>
   spotgo download --archive baixadas.txt <playlist>`,
@@ -253,7 +255,7 @@ func (s *session) resolve(links []string) ([]download.Item, []group, int, error)
 		printWarnings(stderr, res)
 		start := len(items)
 		items = append(items, toItems(res)...)
-		if res.Ref.Kind != song.KindTrack && res.Name != "" {
+		if res.Ref.Kind != song.KindTrack && res.Ref.Kind != song.KindSearch && res.Name != "" {
 			groups = append(groups, group{res.Name, start, len(items)})
 		}
 	}
@@ -327,7 +329,7 @@ func (s *session) finish(counts map[download.Status]int, linkErrs, links int) er
 
 func toItems(r source.Result) []download.Item {
 	list := ""
-	if r.Ref.Kind != song.KindTrack {
+	if r.Ref.Kind != song.KindTrack && r.Ref.Kind != song.KindSearch {
 		list = r.Name
 	}
 	items := make([]download.Item, len(r.Songs))

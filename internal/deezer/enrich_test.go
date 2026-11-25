@@ -228,3 +228,52 @@ func TestEnrichAlbumMultiArtistQuery(t *testing.T) {
 		t.Fatalf("requisições = %d, quero 3 (busca + álbum + faixas)", len(rec.reqs))
 	}
 }
+
+func TestSearchTrack(t *testing.T) {
+	c, _ := newTestClient(t, fixtureServer(t), "")
+	s, err := c.SearchTrack(context.Background(), "come together beatles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Title != "Come Together (Remastered 2009)" || s.ISRC != "GBAYE0601690" || s.MainArtist() == "" || s.CoverURL == "" || s.Duration == 0 {
+		t.Errorf("SearchTrack = %+v", s)
+	}
+
+	empty, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"data":[],"total":0}`))
+	}), "")
+	if _, err := empty.SearchTrack(context.Background(), "nada"); !errors.Is(err, ErrNotFound) {
+		t.Errorf("err = %v", err)
+	}
+}
+
+func TestSearchTrackSkipsVariousArtists(t *testing.T) {
+	c, rec := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/search":
+			w.Write([]byte(`{"data":[
+				{"id":1,"title":"Never Gonna Give You Up","duration":211,"artist":{"name":"Rick Astley"},"album":{"id":10,"title":"Reeling In The Decades"}},
+				{"id":6,"title":"Never Gonna Give You Up","duration":213,"artist":{"name":"Rick Astley"},"album":{"id":60,"title":"Greatest Hits"}},
+				{"id":2,"title":"Never Gonna Give You Up","duration":213,"artist":{"name":"Rick Astley"},"album":{"id":20,"title":"Whenever You Need Somebody"}},
+				{"id":3,"title":"Never Gonna Give You Up","duration":213,"artist":{"name":"Rick Astley"},"album":{"id":30,"title":"Outro"}}
+			],"total":4}`))
+		case "/album/10":
+			w.Write([]byte(`{"id":10,"title":"Reeling In The Decades","artist":{"name":"Vários intérpretes"}}`))
+		case "/album/20":
+			w.Write([]byte(`{"id":20,"title":"Whenever You Need Somebody","artist":{"name":"Rick Astley"}}`))
+		case "/track/2":
+			w.Write([]byte(`{"id":2,"title":"Never Gonna Give You Up","duration":213,"artist":{"name":"Rick Astley"},"album":{"id":20,"title":"Whenever You Need Somebody","release_date":"1987-11-12"}}`))
+		default:
+			t.Errorf("não devia ler %s", r.URL.Path)
+			w.WriteHeader(404)
+		}
+	}), "")
+	s, err := c.SearchTrack(context.Background(), "never gonna give you up")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Album != "Whenever You Need Somebody" || s.ReleaseDate != "1987-11-12" {
+		t.Errorf("devia pular a coletânea: %+v", s)
+	}
+	_ = rec
+}

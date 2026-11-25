@@ -94,7 +94,8 @@ spotgo [operação] [opções] LINKS...
 ```
 
 Os **links** podem ser de faixas, álbuns, playlists ou artistas do Spotify
-(`https://open.spotify.com/...` ou `spotify:album:...`). Para ver todas as **opções**, use `spotgo -h`
+(`https://open.spotify.com/...` ou `spotify:album:...`). Qualquer outro texto vira **busca**: o spotgo
+usa a faixa mais relevante do Deezer, evitando coletâneas (`spotgo download "queen bohemian rhapsody"`). Para ver todas as **opções**, use `spotgo -h`
 ou `spotgo [operação] -h`.
 
 Exemplos:
@@ -102,6 +103,9 @@ Exemplos:
 ```sh
 # baixa uma faixa como "Artista - Título.mp3" na pasta atual
 spotgo download https://open.spotify.com/track/2EqlS6tkEnglzr7tkKAAYD
+
+# por busca, sem link
+spotgo download "rick astley never gonna give you up"
 
 # um álbum em opus, separado em pastas
 spotgo download --format opus -o "{album-artist}/{album}/{track-number} {title}" \
