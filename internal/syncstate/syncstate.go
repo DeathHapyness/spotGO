@@ -21,6 +21,8 @@ type State struct {
 	Format   string   `json:"format"`
 	Bitrate  string   `json:"bitrate,omitempty"`
 	Audio    string   `json:"audio,omitempty"`
+	Lyrics   string   `json:"lyrics,omitempty"`
+	M3U      bool     `json:"m3u,omitempty"`
 	// Files liga o ID da faixa ao caminho (relativo à pasta, com /) do arquivo
 	// que o sync criou. Só esses arquivos podem ser apagados.
 	Files map[string]string `json:"files"`
@@ -106,10 +108,21 @@ func ApplyMoves(dir string, moves []Move) ([]Move, error) {
 	}
 	type staged struct {
 		Move
-		tmp string
+		tmp     string
+		sidecar bool
 	}
 	var st []staged
-	for i, m := range moves {
+	var all []Move
+	isSidecar := map[int]bool{}
+	for _, m := range moves {
+		all = append(all, m)
+		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(sidecar(m.From)))); err == nil {
+			isSidecar[len(all)] = true
+			all = append(all, Move{sidecar(m.From), sidecar(m.To)})
+			leaving[sidecar(m.From)] = true
+		}
+	}
+	for i, m := range all {
 		from := filepath.Join(dir, filepath.FromSlash(m.From))
 		if _, err := os.Stat(from); err != nil {
 			continue
@@ -121,7 +134,7 @@ func ApplyMoves(dir string, moves []Move) ([]Move, error) {
 		if err := os.Rename(from, tmp); err != nil {
 			return nil, err
 		}
-		st = append(st, staged{m, tmp})
+		st = append(st, staged{m, tmp, isSidecar[i]})
 	}
 	var done []Move
 	for _, s := range st {
@@ -132,7 +145,9 @@ func ApplyMoves(dir string, moves []Move) ([]Move, error) {
 		if err := os.Rename(s.tmp, to); err != nil {
 			return done, err
 		}
-		done = append(done, s.Move)
+		if !s.sidecar {
+			done = append(done, s.Move)
+		}
 	}
 	for _, m := range done {
 		RemoveEmptyDirs(dir, m.From)
@@ -160,6 +175,30 @@ func Stale(old, current map[string]string, ok map[string]bool) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// sidecar é o .lrc que acompanha um arquivo de áudio.
+func sidecar(rel string) string {
+	return strings.TrimSuffix(rel, filepath.Ext(rel)) + ".lrc"
+}
+
+// Remove apaga o arquivo, o .lrc dele e as pastas que ficarem vazias.
+// removed=false quando o arquivo já não existia.
+func Remove(dir, rel string) (removed bool, err error) {
+	err = os.Remove(filepath.Join(dir, filepath.FromSlash(rel)))
+	switch {
+	case err == nil:
+		removed = true
+	case errors.Is(err, fs.ErrNotExist):
+		err = nil
+	default:
+		return false, err
+	}
+	if s := sidecar(rel); s != rel {
+		os.Remove(filepath.Join(dir, filepath.FromSlash(s)))
+	}
+	RemoveEmptyDirs(dir, rel)
+	return removed, nil
 }
 
 // RemoveEmptyDirs apaga as pastas que ficaram vazias acima de rel, sem sair de dir.

@@ -187,7 +187,7 @@ func TestDownloadArchive(t *testing.T) {
 		return errb.String()
 	}
 	errOut := run()
-	if len(conv.jobs) != 1 || conv.jobs[0].Song.Title != "Dois" || !strings.Contains(errOut, "1 faixa pulada pelo --archive") {
+	if len(conv.jobs) != 1 || conv.jobs[0].Song.Title != "Dois" || !strings.Contains(errOut, "1 pulada pelo --archive") {
 		t.Fatalf("jobs=%+v\n%s", conv.jobs, errOut)
 	}
 	b, _ := os.ReadFile(arch)
@@ -197,5 +197,38 @@ func TestDownloadArchive(t *testing.T) {
 	run()
 	if len(conv.jobs) != 1 {
 		t.Errorf("a 2ª rodada não deveria baixar nada: %d", len(conv.jobs))
+	}
+}
+
+func TestSyncM3UAndLyricsSaved(t *testing.T) {
+	g := newSyncRig(t)
+	g.r.results[idBom] = playlist("Um", "Dois")
+	if _, errOut, err := g.run("--m3u", "--lyrics", "tag,lrc", "-o", "{list-name}/{title}", playlistURL(idBom)); err != nil {
+		t.Fatal(err, errOut)
+	}
+	b, err := os.ReadFile(filepath.Join(g.dir, "Mix.m3u8"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "#EXTM3U\n#EXTINF:-1,A - Um\nMix/Um.mp3\n#EXTINF:-1,A - Dois\nMix/Dois.mp3\n"; string(b) != want {
+		t.Errorf("m3u:\n%s", b)
+	}
+	st, _, _ := syncstate.Load(g.dir)
+	if !st.M3U || st.Lyrics != "tag,lrc" {
+		t.Errorf("estado: %+v", st)
+	}
+
+	// Dois sai da playlist: some do m3u também.
+	g.r.results[idBom] = playlist("Um")
+	g.run()
+	b, _ = os.ReadFile(filepath.Join(g.dir, "Mix.m3u8"))
+	if strings.Contains(string(b), "Dois") {
+		t.Errorf("m3u ainda tem a faixa removida:\n%s", b)
+	}
+}
+
+func TestDownloadBadLyrics(t *testing.T) {
+	if _, _, err := runDownload(t, fakeFetch{}, &fakeConv{}, findAllOK, nil, "--lyrics", "genius", albumURL(idBom)); err == nil {
+		t.Error("--lyrics inválido deve falhar")
 	}
 }

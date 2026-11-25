@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -57,6 +56,10 @@ nada é apagado nessa rodada.
 			pick("output", &f.output, &st.Template)
 			pick("format", &f.format, &st.Format)
 			pick("audio", &f.audio, &st.Audio)
+			pick("lyrics", &f.lyrics, &st.Lyrics)
+			if fl.Changed("m3u") {
+				st.M3U = f.m3u
+			}
 			if fl.Changed("bitrate") {
 				st.Bitrate = f.bitrate
 			}
@@ -66,7 +69,7 @@ nada é apagado nessa rodada.
 			if err != nil {
 				return err
 			}
-			items, linkErrs, err := s.resolve(st.Links)
+			items, groups, linkErrs, err := s.resolve(st.Links)
 			if err != nil {
 				return err
 			}
@@ -89,7 +92,7 @@ nada é apagado nessa rodada.
 			for _, it := range items {
 				byPath[filepath.Join(dir, s.p.RelPath(it))] = key(it)
 			}
-			counts := s.run(items, func(o download.Outcome) {
+			outs, counts := s.run(items, func(o download.Outcome) {
 				k := byPath[o.Path]
 				if o.Status == download.Downloaded || o.Status == download.Skipped {
 					ok[k] = true
@@ -114,22 +117,24 @@ nada é apagado nessa rodada.
 				keepOld(files, st.Files)
 			default:
 				for _, rel := range syncstate.Stale(st.Files, current, ok) {
-					err := os.Remove(filepath.Join(dir, filepath.FromSlash(rel)))
-					if err != nil && !errors.Is(err, os.ErrNotExist) {
+					removed, err := syncstate.Remove(dir, rel)
+					if err != nil {
 						fmt.Fprintf(stderr, "aviso: não consegui apagar %s: %v\n", rel, err)
 						continue
 					}
-					if err == nil {
+					if removed {
 						deleted++
 						fmt.Fprintf(stdout, "apagado     %s\n", rel)
 					}
-					syncstate.RemoveEmptyDirs(dir, rel)
 				}
 			}
 			if interrupted {
 				keepOld(files, st.Files)
 			}
 
+			if st.M3U && !interrupted {
+				s.writeM3U(dir, groups, outs)
+			}
 			st.Files = files
 			if err := syncstate.Save(dir, st); err != nil {
 				return fmt.Errorf("salvando %s: %w", syncstate.FileName, err)

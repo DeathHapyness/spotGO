@@ -21,6 +21,7 @@ import (
 	"github.com/DeathHapyness/spotGO/internal/embed"
 	"github.com/DeathHapyness/spotGO/internal/fetch"
 	"github.com/DeathHapyness/spotGO/internal/ffmpeg"
+	"github.com/DeathHapyness/spotGO/internal/lyrics"
 	"github.com/DeathHapyness/spotGO/internal/provider"
 	"github.com/DeathHapyness/spotGO/internal/provider/bandcamp"
 	"github.com/DeathHapyness/spotGO/internal/provider/soundcloud"
@@ -91,6 +92,7 @@ func newDownloadEnv(progress func(done, total int)) downloadEnv {
 			return newChain(f, audio, ytdlp), nil
 		},
 		covers: coverFetcher{f},
+		lyrics: lyrics.New(f),
 		tools:  downloadTools,
 	}
 }

@@ -52,6 +52,13 @@ func TestMetadata(t *testing.T) {
 	}
 }
 
+func TestMetadataLyrics(t *testing.T) {
+	m := string(Metadata(Job{Song: song.Song{Title: "x"}, Format: MP3, Lyrics: "[00:01.00]um\ndois=três"}))
+	if !strings.Contains(m, "lyrics=[00:01.00]um\\\ndois\\=três\n") {
+		t.Errorf("letra mal escapada:\n%s", m)
+	}
+}
+
 func TestMetadataPictureBlock(t *testing.T) {
 	img := append([]byte("\xff\xd8\xff\xe0"), bytes.Repeat([]byte{1}, 100)...)
 	m := string(Metadata(Job{Song: song.Song{Title: "x"}, Format: Opus, Cover: img}))
@@ -204,7 +211,7 @@ func TestConvertReal(t *testing.T) {
 	for _, f := range Formats {
 		t.Run(string(f), func(t *testing.T) {
 			out := filepath.Join(dir, "sub", "x."+string(f))
-			job := Job{Input: audio, InputCodec: "opus", Output: out, Format: f, Song: s, Cover: cover}
+			job := Job{Input: audio, InputCodec: "opus", Output: out, Format: f, Song: s, Cover: cover, Lyrics: "[00:01.00]um\ndois"}
 			if err := (&Converter{}).Convert(context.Background(), job); err != nil {
 				t.Fatal(err)
 			}
@@ -225,6 +232,9 @@ func TestConvertReal(t *testing.T) {
 			}
 			if _, ok := tags["duration"]; ok && f == Opus {
 				t.Errorf("tags da entrada vazaram para a saída: %v", tags)
+			}
+			if f != WAV && tags["lyrics"] != "[00:01.00]um\ndois" {
+				t.Errorf("letra: %q", tags["lyrics"])
 			}
 			if f != WAV && f != M4A && tags["isrc"] != s.ISRC {
 				t.Errorf("ISRC: %v", tags)

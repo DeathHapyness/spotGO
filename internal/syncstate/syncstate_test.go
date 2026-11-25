@@ -130,3 +130,27 @@ func TestArchive(t *testing.T) {
 		t.Errorf("conteúdo = %q", got)
 	}
 }
+
+func TestSidecars(t *testing.T) {
+	dir := t.TempDir()
+	write(t, dir, "L/01 a.mp3", "a")
+	write(t, dir, "L/01 a.lrc", "letra a")
+	write(t, dir, "L/02 b.mp3", "b")
+	write(t, dir, "L/02 b.lrc", "letra b")
+	done, err := ApplyMoves(dir, []Move{{"L/01 a.mp3", "L/02 a.mp3"}, {"L/02 b.mp3", "L/03 b.mp3"}})
+	if err != nil || len(done) != 2 {
+		t.Fatalf("done=%v err=%v", done, err)
+	}
+	if read(t, dir, "L/02 a.lrc") != "letra a" || read(t, dir, "L/03 b.lrc") != "letra b" {
+		t.Error("o .lrc não acompanhou o áudio")
+	}
+
+	removed, err := Remove(dir, "L/02 a.mp3")
+	if err != nil || !removed || read(t, dir, "L/02 a.lrc") != "<sem arquivo>" {
+		t.Errorf("Remove: %v %v", removed, err)
+	}
+	removed, err = Remove(dir, "L/sumiu.mp3")
+	if err != nil || removed {
+		t.Errorf("arquivo que não existe: %v %v", removed, err)
+	}
+}

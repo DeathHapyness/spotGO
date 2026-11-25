@@ -71,6 +71,7 @@ type Job struct {
 	Bitrate string
 	Song    song.Song
 	Cover   []byte
+	Lyrics  string
 }
 
 type Converter struct {
@@ -218,6 +219,7 @@ func Metadata(job Job) []byte {
 	put("date", s.ReleaseDate)
 	put("ISRC", s.ISRC)
 	put("comment", s.SpotifyURL())
+	put("lyrics", job.Lyrics)
 	if len(job.Cover) > 0 && (job.Format == Opus || job.Format == OGG) {
 		put("METADATA_BLOCK_PICTURE", pictureBlock(job.Cover))
 	}

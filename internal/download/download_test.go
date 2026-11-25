@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/DeathHapyness/spotGO/internal/ffmpeg"
+	"github.com/DeathHapyness/spotGO/internal/lyrics"
 	"github.com/DeathHapyness/spotGO/internal/matching"
 	"github.com/DeathHapyness/spotGO/internal/output"
 	"github.com/DeathHapyness/spotGO/internal/song"
@@ -283,5 +284,49 @@ func TestYTDLPFetch(t *testing.T) {
 	y.Run = func(ctx context.Context, path string, args []string) ([]byte, []byte, error) { return nil, nil, nil }
 	if _, _, err := y.Fetch(context.Background(), "u", ffmpeg.Opus, "/tmp/d"); err == nil {
 		t.Error("saída vazia deve dar erro")
+	}
+}
+
+type fakeLyrics struct{ l lyrics.Lyrics }
+
+func (f fakeLyrics) Get(context.Context, song.Song) (lyrics.Lyrics, error) {
+	if f.l.Text() == "" {
+		return f.l, lyrics.ErrNotFound
+	}
+	return f.l, nil
+}
+
+func TestRunLyrics(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		tag, file bool
+		l         lyrics.Lyrics
+		wantTag   string
+		wantLRC   bool
+	}{
+		{"tag e lrc", true, true, lyrics.Lyrics{Synced: "[00:01.00]a", Plain: "a"}, "[00:01.00]a", true},
+		{"só texto não gera lrc", true, true, lyrics.Lyrics{Plain: "a"}, "a", false},
+		{"só lrc", false, true, lyrics.Lyrics{Synced: "[00:01.00]a"}, "", true},
+		{"sem letra", true, true, lyrics.Lyrics{}, "", false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &fakeConverter{}
+			p := newPipeline(t, &fakeFinder{}, &fakeFetcher{}, c)
+			p.Lyrics, p.LyricsTag, p.LyricsFile = fakeLyrics{tt.l}, tt.tag, tt.file
+			out := p.Run(context.Background(), items("a"))
+			if out[0].Status != Downloaded {
+				t.Fatalf("status %v: %v", out[0].Status, out[0].Err)
+			}
+			if c.jobs[0].Lyrics != tt.wantTag {
+				t.Errorf("tag = %q", c.jobs[0].Lyrics)
+			}
+			b, err := os.ReadFile(LRCPath(out[0].Path))
+			if tt.wantLRC != (err == nil) {
+				t.Errorf("lrc existe = %v, want %v", err == nil, tt.wantLRC)
+			}
+			if tt.wantLRC && string(b) != tt.l.Synced+"\n" {
+				t.Errorf("lrc = %q", b)
+			}
+		})
 	}
 }

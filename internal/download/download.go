@@ -5,12 +5,15 @@ package download
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/DeathHapyness/spotGO/internal/ffmpeg"
+	"github.com/DeathHapyness/spotGO/internal/lyrics"
 	"github.com/DeathHapyness/spotGO/internal/matching"
 	"github.com/DeathHapyness/spotGO/internal/output"
 	"github.com/DeathHapyness/spotGO/internal/song"
@@ -33,6 +36,10 @@ type Covers interface {
 	Cover(ctx context.Context, url string) ([]byte, error)
 }
 
+type Lyrics interface {
+	Get(ctx context.Context, s song.Song) (lyrics.Lyrics, error)
+}
+
 type Item struct {
 	Song         song.Song
 	ListName     string
@@ -49,6 +56,8 @@ const (
 	NotFound
 	Failed
 	Canceled
+	// Archived: pulada pelo Options.Skip (o --archive), sem olhar o disco.
+	Archived
 )
 
 type Outcome struct {
@@ -69,6 +78,8 @@ type Options struct {
 	SearchWorkers   int
 	DownloadWorkers int
 	ConvertWorkers  int
+	// Skip pula a faixa antes de tudo (nil = nenhuma).
+	Skip func(Item) bool
 	// ErrNotFound é o erro do Finder que significa "não achou" (e não falha de rede).
 	ErrNotFound error
 }
@@ -86,6 +97,11 @@ type Pipeline struct {
 	Fetcher   Fetcher
 	Converter Converter
 	Covers    Covers
+	// Lyrics nil = sem letra. LyricsTag grava na tag; LyricsFile grava o .lrc
+	// ao lado (só quando há letra sincronizada).
+	Lyrics     Lyrics
+	LyricsTag  bool
+	LyricsFile bool
 	Options
 	// OnDone é chamado (um de cada vez) quando uma faixa termina.
 	OnDone func(i int, o Outcome)
@@ -175,6 +191,10 @@ func (p *Pipeline) Run(ctx context.Context, items []Item) []Outcome {
 				continue
 			}
 			j := job{i: i, path: filepath.Join(p.Dir, p.RelPath(it))}
+			if p.Skip != nil && p.Skip(it) {
+				finish(j, Outcome{Status: Archived})
+				continue
+			}
 			if seen[j.path] {
 				finish(j, Outcome{Status: Skipped})
 				continue
@@ -278,13 +298,52 @@ func (p *Pipeline) convert(ctx context.Context, j job, s song.Song, stage func(i
 		// Sem capa a faixa ainda vale a pena; o erro da capa não derruba a faixa.
 		cover, _ = p.Covers.Cover(ctx, s.CoverURL)
 	}
-	err := p.Converter.Convert(ctx, ffmpeg.Job{
+	var lyr lyrics.Lyrics
+	if p.Lyrics != nil && (p.LyricsTag || p.LyricsFile) {
+		// Como a capa: sem letra a faixa ainda vale a pena.
+		lyr, _ = p.Lyrics.Get(ctx, s)
+	}
+	job := ffmpeg.Job{
 		Input: j.file, InputCodec: j.codec, Output: j.path,
 		Format: p.Format, Bitrate: p.Bitrate, Song: s, Cover: cover,
-	})
-	if err != nil {
+	}
+	if p.LyricsTag {
+		job.Lyrics = lyr.Text()
+	}
+	if err := p.Converter.Convert(ctx, job); err != nil {
 		fail(j, err)
 		return
 	}
+	if p.LyricsFile && lyr.Synced != "" {
+		if err := writeLRC(j.path, lyr.Synced); err != nil {
+			fail(j, fmt.Errorf("gravando o .lrc: %w", err))
+			return
+		}
+	}
 	finish(j, Outcome{Status: Downloaded})
+}
+
+// LRCPath é o .lrc que acompanha o arquivo de áudio.
+func LRCPath(audio string) string {
+	return strings.TrimSuffix(audio, filepath.Ext(audio)) + ".lrc"
+}
+
+func writeLRC(audio, text string) error {
+	path := LRCPath(audio)
+	tmp, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".tmp-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	_, err = tmp.WriteString(text + "\n")
+	if cerr := tmp.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		err = os.Chmod(tmp.Name(), 0o644)
+	}
+	if err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), path)
 }
