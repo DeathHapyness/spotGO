@@ -89,12 +89,24 @@ func (p *Public) album(ctx context.Context, r *Result) error {
 		return err
 	}
 	r.Name, r.Artist = col.Name, col.Artist
-	r.Songs, err = p.meta.EnrichAlbum(ctx, col.Name, col.Artist, slices.Clone(col.Songs))
+	songs := slices.Clone(col.Songs)
+	// O embed do álbum vem sem data; o de uma faixa traz a do álbum no Spotify,
+	// que é a do lançamento original (o Deezer data remasters pelo relançamento).
+	if len(songs) > 0 && songs[0].SpotifyID != "" {
+		if t, err := p.embed.Track(ctx, songs[0].SpotifyID); err == nil && t.ReleaseDate != "" {
+			for i := range songs {
+				songs[i].ReleaseDate = t.ReleaseDate
+			}
+		} else if ctx.Err() != nil {
+			return ctx.Err()
+		}
+	}
+	r.Songs, err = p.meta.EnrichAlbum(ctx, col.Name, col.Artist, songs)
 	if err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		r.Songs = slices.Clone(col.Songs)
+		r.Songs = songs
 	}
 	var missing []int
 	for i, s := range r.Songs {

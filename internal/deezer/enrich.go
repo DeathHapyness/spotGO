@@ -44,7 +44,8 @@ func (c *Client) EnrichTrack(ctx context.Context, s song.Song) (song.Song, bool,
 		out.AlbumArtist = t.Artist.Name
 	}
 	if out.ReleaseDate == "" {
-		out.ReleaseDate = firstNonEmpty(t.ReleaseDate, t.Album.ReleaseDate)
+		// A data da faixa às vezes é a do recadastro no Deezer (2026); a do álbum é a do lançamento.
+		out.ReleaseDate = firstNonEmpty(t.Album.ReleaseDate, t.ReleaseDate)
 	}
 	if out.TrackCount == 0 {
 		out.TrackCount = t.Album.NbTracks

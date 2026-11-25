@@ -277,3 +277,20 @@ func TestSearchTrackSkipsVariousArtists(t *testing.T) {
 	}
 	_ = rec
 }
+
+func TestEnrichTrackPrefersAlbumDate(t *testing.T) {
+	c, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/search":
+			w.Write([]byte(`{"data":[{"id":7,"title":"Never Gonna Give You Up","duration":213,"artist":{"name":"Rick Astley"},"album":{"id":20,"title":"Whenever You Need Somebody"}}],"total":1}`))
+		case "/track/7":
+			w.Write([]byte(`{"id":7,"title":"Never Gonna Give You Up","duration":213,"isrc":"X","release_date":"2026-01-28","artist":{"name":"Rick Astley"},"album":{"id":20,"title":"Whenever You Need Somebody","release_date":"1987-11-12"}}`))
+		default:
+			w.WriteHeader(404)
+		}
+	}), "")
+	got, ok, err := c.EnrichTrack(context.Background(), song.Song{Title: "Never Gonna Give You Up", Artists: []string{"Rick Astley"}, Duration: 213 * time.Second})
+	if err != nil || !ok || got.ReleaseDate != "1987-11-12" {
+		t.Errorf("EnrichTrack = %+v ok=%v err=%v", got, ok, err)
+	}
+}

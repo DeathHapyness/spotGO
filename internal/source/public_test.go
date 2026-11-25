@@ -382,3 +382,29 @@ func TestResolveSearch(t *testing.T) {
 		t.Errorf("err = %v", err)
 	}
 }
+
+func TestAlbumDateFromTrackEmbed(t *testing.T) {
+	e := albumEmbed(titles("A", "B"))
+	e.track = song.Song{Title: "A", ReleaseDate: "1969-09-26"}
+	var seen []string
+	m := &fakeMeta{album: func(s []song.Song) ([]song.Song, error) {
+		for _, x := range s {
+			seen = append(seen, x.ReleaseDate)
+		}
+		return withISRC(s, "A", "B"), nil
+	}}
+	r, err := NewPublic(e, m).Resolve(context.Background(), song.Ref{Kind: song.KindAlbum, ID: "a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(seen, []string{"1969-09-26", "1969-09-26"}) || r.Songs[1].ReleaseDate != "1969-09-26" {
+		t.Errorf("a data do Spotify devia valer para o álbum todo: seen=%v songs=%+v", seen, r.Songs)
+	}
+
+	// Sem a data da faixa, segue sem ela (o Deezer completa).
+	e2 := albumEmbed(titles("A"))
+	e2.track = song.Song{Title: "A"}
+	if _, err := NewPublic(e2, &fakeMeta{album: func(s []song.Song) ([]song.Song, error) { return s, nil }}).Resolve(context.Background(), song.Ref{Kind: song.KindAlbum, ID: "a"}); err != nil {
+		t.Fatal(err)
+	}
+}
