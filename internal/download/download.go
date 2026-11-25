@@ -73,6 +73,14 @@ type Options struct {
 	ErrNotFound error
 }
 
+// RelPath é o caminho do arquivo final de it, relativo a Dir.
+func (o Options) RelPath(it Item) string {
+	return o.Template.Path(output.Vars{
+		Song: it.Song, Ext: string(o.Format),
+		ListName: it.ListName, ListPosition: it.ListPosition, ListLength: it.ListLength,
+	})
+}
+
 type Pipeline struct {
 	Finder    Finder
 	Fetcher   Fetcher
@@ -166,11 +174,7 @@ func (p *Pipeline) Run(ctx context.Context, items []Item) []Outcome {
 				fail(job{i: i}, ctx.Err())
 				continue
 			}
-			rel := p.Template.Path(output.Vars{
-				Song: it.Song, Ext: string(p.Format),
-				ListName: it.ListName, ListPosition: it.ListPosition, ListLength: it.ListLength,
-			})
-			j := job{i: i, path: filepath.Join(p.Dir, rel)}
+			j := job{i: i, path: filepath.Join(p.Dir, p.RelPath(it))}
 			if seen[j.path] {
 				finish(j, Outcome{Status: Skipped})
 				continue

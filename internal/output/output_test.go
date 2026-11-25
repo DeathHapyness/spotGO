@@ -42,6 +42,7 @@ func TestPath(t *testing.T) {
 		{"playlist", "{list-name}/{list-position} - {title}", sample, Vars{ListName: "Rock: 90s", ListPosition: 7, ListLength: 120},
 			filepath.Join("Rock- 90s", "007 - Paranoid Android.mp3")},
 		{"barra invertida vira pasta", `{artist}\{title}`, sample, Vars{}, filepath.Join("Radiohead", "Paranoid Android.mp3")},
+		{"absoluto", "/música/{artist}/{title}", sample, Vars{}, filepath.Join(string(filepath.Separator), "música", "Radiohead", "Paranoid Android.mp3")},
 		{"campo vazio", "{album}/{title}", song.Song{Title: "x"}, Vars{}, filepath.Join("_", "x.mp3")},
 		{"outros campos", "{isrc} {track-id} {duration} {disc-number} {tracks-count} {date}", sample, Vars{},
 			"GBAYE9700050 6LgJvl0Xdtc73RJ1mmpotq 387 1 12 1997-05-21.mp3"},

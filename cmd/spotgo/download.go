@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/DeathHapyness/spotGO/internal/provider/ytmusic"
 	"github.com/DeathHapyness/spotGO/internal/song"
 	"github.com/DeathHapyness/spotGO/internal/source"
+	"github.com/DeathHapyness/spotGO/internal/syncstate"
 )
 
 type downloadFlags struct {
@@ -43,6 +45,7 @@ type downloadEnv struct {
 
 func newDownloadCmd(newEnv func(progress func(done, total int)) downloadEnv) *cobra.Command {
 	f := downloadFlags{tools: map[deps.Tool]*string{}}
+	var archivePath string
 	cmd := &cobra.Command{
 		Use:   "download <link>...",
 		Short: "Baixa as faixas com capa e metadados",
@@ -50,90 +53,66 @@ func newDownloadCmd(newEnv func(progress func(done, total int)) downloadEnv) *co
 no YouTube Music, baixa o áudio com o yt-dlp e grava o arquivo final com o
 ffmpeg, já com as tags e a capa. Faixas que já existem são puladas.
 
-Variáveis do --output: {title} {artists} {artist} {album} {album-artist}
-{track-number} {tracks-count} {disc-number} {year} {date} {isrc} {track-id}
-{duration} {list-name} {list-position} {list-length} {output-ext}.
-Uma / no template cria pastas.`,
+` + templateHelp,
 		Example: `  spotgo download https://open.spotify.com/track/2EqlS6tkEnglzr7tkKAAYD
   spotgo download -o "{album-artist}/{album}/{track-number} {title}" --format opus <álbum>
-  spotgo download -o "{list-name}/{list-position} - {artists} - {title}" <playlist>`,
+  spotgo download -o "{list-name}/{list-position} - {artists} - {title}" <playlist>
+  spotgo download --archive baixadas.txt <playlist>`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx, stdout, stderr := cmd.Context(), cmd.OutOrStdout(), cmd.ErrOrStderr()
-			format, err := ffmpeg.ParseFormat(f.format)
-			if err != nil {
-				return err
-			}
-			tmpl, err := output.Parse(f.output)
-			if err != nil {
-				return err
-			}
-			if f.threads < 1 {
-				return errors.New("--threads precisa ser pelo menos 1")
-			}
-
-			progress := progressPrinter(stderr)
-			env := newEnv(progress)
-			fetcher, conv, warnings, err := env.tools(ctx, f, confirmInstall(cmd, f.yes))
-			if err != nil {
-				return err
-			}
-			for _, w := range warnings {
-				fmt.Fprintln(stderr, "aviso:", w)
-			}
-
-			var items []download.Item
-			linkErrs := 0
-			for _, link := range args {
-				res, err := resolveLink(cmd, env.resolver, link)
-				clearProgress(stderr, progress)
-				if ctx.Err() != nil {
-					return errors.New("interrompido")
-				}
+			var archive *syncstate.Archive
+			if archivePath != "" {
+				a, err := syncstate.OpenArchive(archivePath)
 				if err != nil {
-					linkErrs++
-					fmt.Fprintf(stderr, "erro: %s: %v\n", link, err)
-					continue
+					return fmt.Errorf("--archive: %w", err)
 				}
-				printWarnings(stderr, res)
-				items = append(items, toItems(res)...)
+				archive = a
+			}
+			s, err := newSession(cmd, newEnv, f, "")
+			if err != nil {
+				return err
+			}
+			items, linkErrs, err := s.resolve(args)
+			if err != nil {
+				return err
 			}
 
-			p := &download.Pipeline{
-				Finder: env.finder, Fetcher: fetcher, Converter: conv, Covers: env.covers,
-				Options: download.Options{
-					Template: tmpl, Format: format, Bitrate: f.bitrate, Overwrite: f.overwrite,
-					SearchWorkers: f.threads, DownloadWorkers: f.threads,
-					ErrNotFound: ytmusic.ErrNotFound,
-				},
+			pre := 0
+			if archive != nil {
+				kept := items[:0]
+				for _, it := range items {
+					if archive.Has(it.Song.SpotifyID) {
+						pre++
+						continue
+					}
+					kept = append(kept, it)
+				}
+				items = kept
 			}
-			counts := map[download.Status]int{}
-			live := liveStatus(stderr, len(items))
-			p.OnStage = func(i int, stage string) { live.stage(items[i].Song, stage) }
-			p.OnDone = func(i int, o download.Outcome) {
-				counts[o.Status]++
-				live.clear()
-				printOutcome(stdout, stderr, o)
-				live.done()
+			counts := s.run(items, func(o download.Outcome) {
+				if archive != nil && (o.Status == download.Downloaded || o.Status == download.Skipped) {
+					if err := archive.Add(o.Song.SpotifyID); err != nil {
+						fmt.Fprintln(cmd.ErrOrStderr(), "aviso: --archive:", err)
+					}
+				}
+			})
+			if pre > 0 {
+				fmt.Fprintf(cmd.ErrOrStderr(), "%s pelo --archive\n", plural(pre, "faixa pulada", "faixas puladas"))
 			}
-			p.Run(ctx, items)
-			live.clear()
-
-			if ctx.Err() != nil {
-				return errors.New("interrompido")
-			}
-			if len(items) > 0 {
-				fmt.Fprintln(stderr, summary(counts))
-			}
-			switch {
-			case linkErrs > 0:
-				return fmt.Errorf("%d de %d links falharam", linkErrs, len(args))
-			case counts[download.Failed] > 0:
-				return fmt.Errorf("%d faixas falharam; rode de novo para tentar outra vez", counts[download.Failed])
-			}
-			return nil
+			return s.finish(counts, linkErrs, len(args))
 		},
 	}
+	addDownloadFlags(cmd, &f)
+	cmd.Flags().StringVar(&archivePath, "archive", "", "arquivo com as faixas já baixadas; elas são puladas, e as novas entram nele")
+	return cmd
+}
+
+const templateHelp = `Variáveis do --output: {title} {artists} {artist} {album} {album-artist}
+{track-number} {tracks-count} {disc-number} {year} {date} {isrc} {track-id}
+{duration} {list-name} {list-position} {list-length} {output-ext}.
+Uma / no template cria pastas.`
+
+func addDownloadFlags(cmd *cobra.Command, f *downloadFlags) {
 	fl := cmd.Flags()
 	fl.StringVarP(&f.output, "output", "o", output.DefaultTemplate, "template do caminho de cada arquivo")
 	fl.StringVar(&f.format, "format", "mp3", "formato: mp3, m4a, opus, ogg, flac ou wav")
@@ -144,7 +123,115 @@ Uma / no template cria pastas.`,
 	for _, t := range deps.Tools {
 		f.tools[t] = fl.String(string(t), "", "caminho do "+string(t))
 	}
-	return cmd
+}
+
+// session junta o que o download e o sync fazem igual: validar as opções,
+// achar os binários, resolver os links e rodar o pipeline mostrando o progresso.
+type session struct {
+	cmd      *cobra.Command
+	env      downloadEnv
+	progress func(done, total int)
+	p        *download.Pipeline
+}
+
+func newSession(cmd *cobra.Command, newEnv func(func(int, int)) downloadEnv, f downloadFlags, dir string) (*session, error) {
+	format, err := ffmpeg.ParseFormat(f.format)
+	if err != nil {
+		return nil, err
+	}
+	tmpl, err := output.Parse(f.output)
+	if err != nil {
+		return nil, err
+	}
+	if f.threads < 1 {
+		return nil, errors.New("--threads precisa ser pelo menos 1")
+	}
+	s := &session{cmd: cmd, progress: progressPrinter(cmd.ErrOrStderr())}
+	s.env = newEnv(s.progress)
+	fetcher, conv, warnings, err := s.env.tools(cmd.Context(), f, confirmInstall(cmd, f.yes))
+	if err != nil {
+		return nil, err
+	}
+	for _, w := range warnings {
+		fmt.Fprintln(cmd.ErrOrStderr(), "aviso:", w)
+	}
+	s.p = &download.Pipeline{
+		Finder: s.env.finder, Fetcher: fetcher, Converter: conv, Covers: s.env.covers,
+		Options: download.Options{
+			Dir: dir, Template: tmpl, Format: format, Bitrate: f.bitrate, Overwrite: f.overwrite,
+			SearchWorkers: f.threads, DownloadWorkers: f.threads,
+			ErrNotFound: ytmusic.ErrNotFound,
+		},
+	}
+	return s, nil
+}
+
+var errInterrupted = errors.New("interrompido")
+
+// resolve só devolve erro no Ctrl+C; links com erro são contados e mostrados.
+func (s *session) resolve(links []string) ([]download.Item, int, error) {
+	stderr := s.cmd.ErrOrStderr()
+	var items []download.Item
+	linkErrs := 0
+	for _, link := range links {
+		res, err := resolveLink(s.cmd, s.env.resolver, link)
+		clearProgress(stderr, s.progress)
+		if s.cmd.Context().Err() != nil {
+			return nil, 0, errInterrupted
+		}
+		if err != nil {
+			linkErrs++
+			fmt.Fprintf(stderr, "erro: %s: %v\n", link, err)
+			continue
+		}
+		printWarnings(stderr, res)
+		items = append(items, toItems(res)...)
+	}
+	return items, linkErrs, nil
+}
+
+func (s *session) run(items []download.Item, onDone func(download.Outcome)) map[download.Status]int {
+	stdout, stderr := s.cmd.OutOrStdout(), s.cmd.ErrOrStderr()
+	counts := map[download.Status]int{}
+	live := liveStatus(stderr, len(items))
+	s.p.OnStage = func(i int, stage string) { live.stage(items[i].Song, stage) }
+	s.p.OnDone = func(i int, o download.Outcome) {
+		counts[o.Status]++
+		live.clear()
+		printOutcome(stdout, stderr, s.rel(o.Path), o)
+		live.done()
+		if onDone != nil {
+			onDone(o)
+		}
+	}
+	s.p.Run(s.cmd.Context(), items)
+	live.clear()
+	if len(items) > 0 && s.cmd.Context().Err() == nil {
+		fmt.Fprintln(stderr, summary(counts))
+	}
+	return counts
+}
+
+func (s *session) rel(path string) string {
+	if s.p.Dir == "" {
+		return path
+	}
+	if r, err := filepath.Rel(s.p.Dir, path); err == nil {
+		return r
+	}
+	return path
+}
+
+func (s *session) finish(counts map[download.Status]int, linkErrs, links int) error {
+	switch {
+	case s.cmd.Context().Err() != nil:
+		return errInterrupted
+	case linkErrs > 0:
+		return fmt.Errorf("%d de %d links falharam", linkErrs, links)
+	case counts[download.Failed] > 0:
+		return fmt.Errorf("%d faixas falharam; rode de novo para tentar outra vez", counts[download.Failed])
+	}
+	return nil
 }
 
 func toItems(r source.Result) []download.Item {
@@ -159,13 +246,13 @@ func toItems(r source.Result) []download.Item {
 	return items
 }
 
-func printOutcome(stdout, stderr io.Writer, o download.Outcome) {
+func printOutcome(stdout, stderr io.Writer, path string, o download.Outcome) {
 	label := songLabel(o.Song)
 	switch o.Status {
 	case download.Downloaded:
-		fmt.Fprintf(stdout, "baixado     %s  →  %s\n", label, o.Path)
+		fmt.Fprintf(stdout, "baixado     %s  →  %s\n", label, path)
 	case download.Skipped:
-		fmt.Fprintf(stdout, "já existe   %s  (%s)\n", label, o.Path)
+		fmt.Fprintf(stdout, "já existe   %s  (%s)\n", label, path)
 	case download.NotFound:
 		fmt.Fprintf(stdout, "não achada  %s\n", label)
 	case download.Failed:

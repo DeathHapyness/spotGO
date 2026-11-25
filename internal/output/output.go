@@ -54,6 +54,8 @@ type part struct {
 }
 
 type Template struct {
+	// root é o começo de um template absoluto ("/" ou "C:\\"), que não passa pela sanitização.
+	root     string
 	segments [][]part
 }
 
@@ -66,8 +68,13 @@ func Parse(tmpl string) (*Template, error) {
 	if !strings.Contains(tmpl, "{output-ext}") {
 		tmpl += ".{output-ext}"
 	}
-	tmpl = strings.ReplaceAll(tmpl, `\`, "/")
 	t := &Template{}
+	if filepath.IsAbs(tmpl) || strings.HasPrefix(tmpl, "/") {
+		vol := filepath.VolumeName(tmpl)
+		t.root = vol + string(filepath.Separator)
+		tmpl = tmpl[len(vol):]
+	}
+	tmpl = strings.ReplaceAll(tmpl, `\`, "/")
 	for _, seg := range strings.Split(tmpl, "/") {
 		if seg == "" {
 			continue
@@ -129,7 +136,7 @@ func (t *Template) Path(v Vars) string {
 			segs[i] = Sanitize(b.String())
 		}
 	}
-	return filepath.Join(segs...)
+	return filepath.Join(append([]string{t.root}, segs...)...)
 }
 
 var replacer = strings.NewReplacer(
