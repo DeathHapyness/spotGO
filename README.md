@@ -57,9 +57,6 @@ usuários**. Quando a cota estoura, a ferramenta quebra para todo mundo ao mesmo
 
   O executável `spotgo` é criado na pasta do projeto.
 
-- Executáveis prontos
-  - Em breve, na aba [Releases](https://github.com/DeathHapyness/spotGO/releases).
-
 </details>
 
 ### yt-dlp, FFmpeg e Deno
