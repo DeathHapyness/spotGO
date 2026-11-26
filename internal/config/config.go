@@ -19,8 +19,24 @@ func (c Credentials) Complete() bool {
 	return c.ClientID != "" && c.ClientSecret != ""
 }
 
+// Login é o refresh token do spotgo login, junto do Client ID que o emitiu
+// (um refresh token só vale para o app que o criou).
+type Login struct {
+	ClientID     string `json:"client_id"`
+	RefreshToken string `json:"refresh_token"`
+}
+
 type Config struct {
 	Spotify Credentials `json:"spotify"`
+	Login   *Login      `json:"login,omitempty"`
+}
+
+// LoggedIn devolve o login salvo, se houver.
+func (c Config) LoggedIn() (Login, bool) {
+	if c.Login == nil || c.Login.ClientID == "" || c.Login.RefreshToken == "" {
+		return Login{}, false
+	}
+	return *c.Login, true
 }
 
 const (

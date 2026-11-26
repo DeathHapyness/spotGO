@@ -18,7 +18,8 @@ Spotify, com capa e metadados. O áudio vem do YouTube Music; nada é baixado do
 
 Funciona sem conta e sem credenciais: a lista de faixas vem da página pública
 de embed do Spotify e os metadados vêm da API pública do Deezer.
-Quem tem Spotify Premium pode usar credenciais próprias (spotgo auth) como modo avançado.`,
+Opcional, para quem tem Spotify Premium: spotgo auth + spotgo login leem as
+playlists da sua conta inteiras (sem o limite de 100 faixas).`,
 		Version:       version,
 		SilenceErrors: true,
 		SilenceUsage:  true,
@@ -29,8 +30,10 @@ Quem tem Spotify Premium pode usar credenciais próprias (spotgo auth) como modo
 	pf.StringVar(&opts.ClientSecret, "client-secret", "", "Client Secret da API do Spotify")
 
 	cmd.AddCommand(newAuthCmd(opts))
-	cmd.AddCommand(newSaveCmd(func(p func(int, int)) resolver { return newPublicResolver(p) }))
-	cmd.AddCommand(newURLCmd(func(p func(int, int)) resolver { return newPublicResolver(p) },
+	cmd.AddCommand(newLoginCmd(opts, defaultLoginDeps()))
+	cmd.AddCommand(newLogoutCmd())
+	cmd.AddCommand(newSaveCmd(newPublicResolver))
+	cmd.AddCommand(newURLCmd(newPublicResolver,
 		newURLFinder))
 	cmd.AddCommand(newSetupCmd(newSetupDeps))
 	cmd.AddCommand(newDownloadCmd(newDownloadEnv))

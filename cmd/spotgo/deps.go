@@ -39,13 +39,10 @@ type resolver interface {
 	Resolve(ctx context.Context, ref song.Ref) (source.Result, error)
 }
 
-// newPublicResolver monta o modo público com um único fetch.Client, para o
-// cache e os limites por host valerem para o embed e o Deezer juntos.
-func newPublicResolver(progress func(done, total int)) *source.Public {
-	f := newFetch()
-	p := source.NewPublic(embed.New(f), deezer.New(f))
-	p.Progress = progress
-	return p
+// newPublicResolver usa um único fetch.Client, para o cache e os limites por
+// host valerem para o embed, o Deezer e a API juntos.
+func newPublicResolver(progress func(done, total int)) resolver {
+	return newResolver(newFetch(), progress)
 }
 
 // newURLFinder só procura o yt-dlp (sem instalar nada) se o SoundCloud foi pedido.
@@ -82,12 +79,36 @@ func newSetupDeps(progress func(t deps.Tool, done, total int64)) setupDeps {
 	}
 }
 
+// newResolver é o modo público e, se houver login, a API para as playlists da conta.
+func newResolver(f *fetch.Client, progress func(done, total int)) resolver {
+	dz := deezer.New(f)
+	p := source.NewPublic(embed.New(f), dz)
+	p.Progress = progress
+	path, err := configPath()
+	if err != nil {
+		return p
+	}
+	cfg, err := config.Load(path)
+	if err != nil {
+		return p
+	}
+	l, ok := cfg.LoggedIn()
+	if !ok {
+		return p
+	}
+	u := spotify.NewUser(f, l.ClientID, l.RefreshToken)
+	u.OnRefresh = func(refresh string) error {
+		return saveLogin(path, &config.Login{ClientID: l.ClientID, RefreshToken: refresh})
+	}
+	return &source.LoggedIn{Next: p, User: u, Meta: dz, Notice: func(msg string) {
+		fmt.Fprintln(os.Stderr, "aviso: "+msg)
+	}}
+}
+
 func newDownloadEnv(progress func(done, total int)) downloadEnv {
 	f := newFetch()
-	p := source.NewPublic(embed.New(f), deezer.New(f))
-	p.Progress = progress
 	return downloadEnv{
-		resolver: p,
+		resolver: newResolver(f, progress),
 		newFinder: func(audio []string, ytdlp string) (download.Finder, error) {
 			return newChain(f, audio, ytdlp), nil
 		},

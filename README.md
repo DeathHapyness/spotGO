@@ -17,7 +17,7 @@ ______________________________________________________________________
 
 > [!WARNING]
 > **Em desenvolvimento.** O `spotgo download` e o `spotgo sync` já baixam faixas, álbuns, playlists e
-> artistas com capa e metadados, e o `spotgo meta` arruma as tags de músicas que você já tem; o `login` ainda não existe. Acompanhe o [design](docs/superpowers/specs/2026-11-21-spotgo-design.md)
+> artistas com capa e metadados, e o `spotgo meta` arruma as tags de músicas que você já tem. Acompanhe o [design](docs/superpowers/specs/2026-11-21-spotgo-design.md)
 > e a lista de [operações](#operações) abaixo.
 
 ______________________________________________________________________
@@ -149,7 +149,7 @@ spotgo url https://open.spotify.com/album/0ETFjACtuP2ADo6LFhL6HN
 | `url` | Mostra o link do áudio encontrado para cada faixa (YouTube Music, YouTube, SoundCloud ou Bandcamp, pelo `--audio`). `--json` para usar com `jq`. | ✅ pronto |
 | `sync` | Sincroniza uma pasta com uma playlist: baixa as faixas novas, renomeia as que mudaram de posição e apaga as removidas (só arquivos que ele mesmo baixou). | ✅ pronto |
 | `meta` | Atualiza as tags, a capa e a letra de músicas que você já tem, sem reencodar o áudio. Acha a faixa pelo link do Spotify no comentário, pelas tags ou pelo nome do arquivo. `--dry-run` só mostra. | ✅ pronto |
-| `login` | Login na sua conta (Premium) para ler playlists suas com mais de 100 faixas. | 🚧 em breve |
+| `login` / `logout` | Opcional: login na sua conta (Premium) para ler playlists suas inteiras, sem o limite de 100 faixas. | ✅ pronto |
 | `setup` | Baixa e confere o yt-dlp, o ffmpeg e o deno. `--update` atualiza. | ✅ pronto |
 
 </details>
@@ -168,19 +168,26 @@ spotgo url https://open.spotify.com/album/0ETFjACtuP2ADo6LFhL6HN
 
 ## Modo avançado (opcional)
 
-> [!NOTE]
-> **Ainda não é usado.** Por enquanto, `spotgo auth` só guarda e testa as credenciais; todas as operações
-> usam o modo sem credenciais. O uso delas (com `spotgo login`) chega numa próxima etapa.
-
 Exige **Spotify Premium**: desde fevereiro de 2026, a Web API do Spotify só funciona para apps cujo dono
-tenha Premium. Ninguém precisa disso para usar o spotgo. Vai ser útil para quem quer playlists próprias com
-mais de 100 faixas e metadados exatos do Spotify.
+tenha Premium. Ninguém precisa disso para usar o spotgo. Serve para quem quer as playlists da própria conta
+com mais de 100 faixas e com os metadados do Spotify.
 
 1. Acesse <https://developer.spotify.com/dashboard> e crie um app
    (qualquer nome; em *Redirect URI* use `http://127.0.0.1:8888/callback`).
 2. Copie o **Client ID** e clique em **View client secret**.
 3. Rode `spotgo auth` e cole os dois. O spotgo testa as credenciais e as
    salva em `~/.config/spotgo/config.json`, com permissão `0600`.
+4. Rode `spotgo login`. O navegador abre na página do Spotify; depois de autorizar, o login fica salvo
+   no mesmo arquivo e é renovado sozinho.
+
+Com o login, as playlists que são **suas ou em que você colabora** são lidas pela API oficial: todas as
+faixas, com os metadados do Spotify. Faixas, álbuns, artistas e playlists de outras pessoas continuam pelo
+modo sem credenciais (a API só lista as faixas de playlists suas). Para baixar inteira uma playlist de outra
+pessoa, copie as faixas para uma playlist sua no app. `spotgo logout` apaga o login.
+
+> [!NOTE]
+> Apps novos ficam em modo de desenvolvimento: só as contas cadastradas em *User Management*, no
+> dashboard do app, podem fazer login. A sua, como dona do app, já pode.
 
 Também dá para passar por flag (`--client-id`, `--client-secret`) ou por variável de
 ambiente (`SPOTGO_CLIENT_ID`, `SPOTGO_CLIENT_SECRET`). A ordem de prioridade é:
@@ -189,7 +196,9 @@ flags → variáveis de ambiente → arquivo. `SPOTGO_CONFIG` troca o caminho do
 ```bash
 spotgo auth           # configura (ou reconfigura) as credenciais
 spotgo auth --status  # mostra de onde vêm as credenciais (o secret nunca é exibido)
-spotgo auth --clear   # apaga as credenciais salvas
+spotgo auth --clear   # apaga as credenciais salvas (e o login)
+spotgo login          # login na sua conta, pelo navegador
+spotgo logout         # apaga só o login
 ```
 
 ## Origem da música e qualidade do áudio

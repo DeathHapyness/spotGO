@@ -107,7 +107,7 @@ func printWarnings(w io.Writer, r source.Result) {
 	}
 	if r.Truncated {
 		fmt.Fprintln(w, "aviso: o Spotify só mostra 100 faixas desta playlist pelo embed, e ela pode ter mais. "+
-			"Com Premium: copie-a para uma playlist sua e use o login (em breve). "+
+			"Com Premium: copie-a para uma playlist sua e use spotgo auth + spotgo login. "+
 			"Sem Premium: divida-a em playlists de até 100 faixas.")
 	}
 }

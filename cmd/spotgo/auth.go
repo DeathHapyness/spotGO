@@ -53,7 +53,16 @@ func authSetup(cmd *cobra.Command, path string) error {
 	if err != nil {
 		return err
 	}
-	if err := config.Save(path, config.Config{Spotify: creds}); err != nil {
+	cfg, err := config.Load(path)
+	if err != nil {
+		cfg = config.Config{}
+	}
+	cfg.Spotify = creds
+	// O login é de um app; com outro Client ID ele não vale mais.
+	if l, ok := cfg.LoggedIn(); ok && l.ClientID != creds.ClientID {
+		cfg.Login = nil
+	}
+	if err := config.Save(path, cfg); err != nil {
 		return err
 	}
 	fmt.Fprintf(cmd.OutOrStdout(), "Credenciais salvas em %s\n", path)
@@ -76,5 +85,12 @@ func authStatus(cmd *cobra.Command, opts *globalOptions, path string) error {
 	fmt.Fprintf(out, "Fonte:     %s\n", src)
 	fmt.Fprintf(out, "Client ID: %s\n", config.Mask(creds.ClientID))
 	fmt.Fprintf(out, "Arquivo:   %s\n", path)
+	login := "não (opcional: spotgo login)"
+	if cfg, err := config.Load(path); err == nil {
+		if _, ok := cfg.LoggedIn(); ok {
+			login = "sim"
+		}
+	}
+	fmt.Fprintf(out, "Login:     %s\n", login)
 	return nil
 }
